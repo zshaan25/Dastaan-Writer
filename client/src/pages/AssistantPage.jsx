@@ -1,0 +1,637 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Sparkles,
+  Plus,
+  Trash2,
+  Send,
+  Loader2,
+  Copy,
+  Check,
+  MessageSquare,
+  FileText,
+  User,
+  Bot,
+  ArrowRight,
+  Menu,
+  X,
+  Edit3,
+  CheckCircle2,
+} from 'lucide-react';
+import {
+  createConversation,
+  getConversations,
+  getConversationById,
+  deleteConversation,
+  sendConversationMessage,
+  generatePost,
+  getPostById,
+  getPostByConversation,
+  refinePost,
+  generatePostAlternatives,
+  updatePost,
+  approvePost,
+} from '../services/api';
+import { FormattedText } from '../utils/textFormatter';
+import { PostEditor } from '../components/PostEditor';
+
+export default function AssistantPage() {
+  const [conversations, setConversations] = useState([]);
+  const [activeConv, setActiveConv] = useState(null);
+  const [activePost, setActivePost] = useState(null);
+  const [showEditor, setShowEditor] = useState(false);
+  const [loadingConvs, setLoadingConvs] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [postLoading, setPostLoading] = useState(false);
+  const [inputMessage, setInputMessage] = useState('');
+  const [error, setError] = useState(null);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    fetchConversations();
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [activeConv?.messages, sending]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const fetchConversations = async () => {
+    try {
+      setLoadingConvs(true);
+      setError(null);
+      const data = await getConversations();
+      setConversations(data);
+      if (data.length > 0 && !activeConv) {
+        loadConversationDetails(data[0]._id);
+      }
+    } catch (err) {
+      console.error('Failed to load conversations:', err);
+      setError('Failed to load conversation history');
+    } finally {
+      setLoadingConvs(false);
+    }
+  };
+
+  const loadConversationDetails = async (id) => {
+    try {
+      setLoadingMessages(true);
+      setError(null);
+      setMobileSidebarOpen(false);
+      setShowEditor(false);
+      setActivePost(null);
+
+      const convData = await getConversationById(id);
+      setActiveConv(convData);
+
+      // Load single canonical post if linked to conversation
+      try {
+        let postDoc = null;
+        if (convData.postId) {
+          postDoc = await getPostById(convData.postId);
+        } else {
+          postDoc = await getPostByConversation(convData._id);
+        }
+
+        if (postDoc) {
+          setActivePost(postDoc);
+          setShowEditor(true);
+        }
+      } catch (postErr) {
+        // No post generated yet for this conversation
+      }
+    } catch (err) {
+      console.error('Failed to load conversation:', err);
+      setError('Failed to load selected conversation');
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  const handleCreateNew = async () => {
+    try {
+      setSending(true);
+      setError(null);
+      setMobileSidebarOpen(false);
+      setShowEditor(false);
+      setActivePost(null);
+      const res = await createConversation({ title: 'New Dastaan Post' });
+      await fetchConversations();
+      await loadConversationDetails(res.conversationId);
+    } catch (err) {
+      console.error('Failed to create conversation:', err);
+      setError('Failed to start new conversation');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleDelete = async (e, id) => {
+    e.stopPropagation();
+    if (!window.confirm('Are you sure you want to delete this conversation?')) return;
+    try {
+      await deleteConversation(id);
+      if (activeConv?._id === id) {
+        setActiveConv(null);
+        setActivePost(null);
+        setShowEditor(false);
+      }
+      fetchConversations();
+    } catch (err) {
+      console.error('Failed to delete conversation:', err);
+      setError('Failed to delete conversation');
+    }
+  };
+
+  const handleSend = async (e) => {
+    e?.preventDefault();
+    if (!inputMessage.trim() || sending) return;
+
+    let targetId = activeConv?._id;
+
+    try {
+      setSending(true);
+      setError(null);
+
+      // Auto-create conversation if none is active
+      if (!targetId) {
+        const newRes = await createConversation();
+        targetId = newRes.conversationId;
+      }
+
+      const userText = inputMessage.trim();
+      setInputMessage('');
+
+      // Optimistically append user message to UI
+      const optimisticMsg = {
+        role: 'user',
+        content: userText,
+        timestamp: new Date().toISOString(),
+      };
+
+      setActiveConv((prev) => ({
+        ...prev,
+        messages: [...(prev?.messages || []), optimisticMsg],
+      }));
+
+      const updatedConv = await sendConversationMessage(targetId, userText);
+      setActiveConv(updatedConv);
+      fetchConversations();
+
+      // If draft was generated by AI in this turn, load canonical post
+      if (updatedConv.postId) {
+        try {
+          const postDoc = await getPostById(updatedConv.postId);
+          setActivePost(postDoc);
+          setShowEditor(true);
+        } catch (e) {
+          // ignore
+        }
+      }
+    } catch (err) {
+      console.error('Failed to send message:', err);
+      setError(err.response?.data?.message || 'Failed to send message to Dastaan AI');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleOpenOrGeneratePost = async () => {
+    if (!activeConv?._id) return;
+
+    // 1. If activePost is already loaded in memory, simply ensure editor is open
+    if (activePost) {
+      setShowEditor(true);
+      return;
+    }
+
+    try {
+      setPostLoading(true);
+      setError(null);
+
+      // 2. Check if a canonical post already exists on the server for this conversation
+      let postDoc = null;
+      try {
+        if (activeConv.postId) {
+          postDoc = await getPostById(activeConv.postId);
+        } else {
+          postDoc = await getPostByConversation(activeConv._id);
+        }
+      } catch (e) {
+        // Not found yet
+      }
+
+      // 3. If no post exists on server, generate one
+      if (!postDoc) {
+        postDoc = await generatePost({
+          conversationId: activeConv._id,
+          postType: 'ACHIEVEMENT',
+          tone: 'PROFESSIONAL',
+        });
+      }
+
+      setActivePost(postDoc);
+      setShowEditor(true);
+    } catch (err) {
+      console.error('Failed to load or generate post:', err);
+      setError(err.response?.data?.message || 'Failed to open post editor');
+    } finally {
+      setPostLoading(false);
+    }
+  };
+
+  const handleRefinePost = async (refinementPayload) => {
+    if (!activePost?._id) return;
+    try {
+      setPostLoading(true);
+      setError(null);
+      const updated = await refinePost({
+        postId: activePost._id,
+        ...refinementPayload,
+      });
+      setActivePost(updated);
+    } catch (err) {
+      console.error('Failed to refine post:', err);
+      setError(err.response?.data?.message || 'Failed to refine post');
+    } finally {
+      setPostLoading(false);
+    }
+  };
+
+  const handleSavePostEdits = async (manualEdits) => {
+    if (!activePost?._id) return;
+    try {
+      setPostLoading(true);
+      setError(null);
+      const updated = await updatePost(activePost._id, manualEdits);
+      setActivePost(updated);
+    } catch (err) {
+      console.error('Failed to save post edits:', err);
+      setError(err.response?.data?.message || 'Failed to save post edits');
+    } finally {
+      setPostLoading(false);
+    }
+  };
+
+  const handleApprovePost = async (postId) => {
+    try {
+      setPostLoading(true);
+      setError(null);
+      const updated = await approvePost(postId);
+      setActivePost(updated);
+    } catch (err) {
+      console.error('Failed to approve post:', err);
+      setError(err.response?.data?.message || 'Failed to approve post');
+    } finally {
+      setPostLoading(false);
+    }
+  };
+
+  const handleGenerateAlternatives = async () => {
+    if (!activePost?._id) return;
+    try {
+      setPostLoading(true);
+      setError(null);
+      const updated = await generatePostAlternatives(activePost._id);
+      setActivePost(updated);
+    } catch (err) {
+      console.error('Failed to generate alternatives:', err);
+      setError(err.response?.data?.message || 'Failed to generate alternative versions');
+    } finally {
+      setPostLoading(false);
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case 'DRAFT_GENERATED':
+        return (
+          <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            Draft Ready
+          </span>
+        );
+      case 'READY_FOR_DRAFT':
+        return (
+          <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+            Ready for Draft
+          </span>
+        );
+      case 'COMPLETED':
+        return (
+          <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+            Completed
+          </span>
+        );
+      default:
+        return (
+          <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+            Collecting Context
+          </span>
+        );
+    }
+  };
+
+  return (
+    <div className="h-full w-full flex overflow-hidden p-2 sm:p-4 gap-3 md:gap-4 relative">
+      {/* MOBILE OVERLAY BACKDROP */}
+      {mobileSidebarOpen && (
+        <div
+          onClick={() => setMobileSidebarOpen(false)}
+          className="md:hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40"
+        />
+      )}
+
+      {/* CONVERSATION SIDEBAR */}
+      <aside
+        className={`fixed md:relative z-50 md:z-auto inset-y-2 left-2 md:inset-0 w-72 md:w-80 bg-slate-900/90 md:bg-slate-900/70 border border-slate-800 rounded-2xl flex flex-col backdrop-blur-md overflow-hidden transition-transform duration-300 ${
+          mobileSidebarOpen ? 'translate-x-0' : '-translate-x-[110%] md:translate-x-0'
+        }`}
+      >
+        <div className="p-3.5 border-b border-slate-800 flex items-center justify-between">
+          <div className="flex items-center gap-2 font-bold text-slate-100 text-sm">
+            <Sparkles className="w-4 h-4 text-indigo-400" />
+            <span>Dastaan Threads</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleCreateNew}
+              disabled={sending}
+              className="p-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition flex items-center gap-1 text-xs font-semibold shadow-lg shadow-indigo-600/20"
+              title="New Post Assistant"
+            >
+              <Plus className="w-4 h-4" />
+              <span>New</span>
+            </button>
+            <button
+              onClick={() => setMobileSidebarOpen(false)}
+              className="md:hidden p-2 text-slate-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          {loadingConvs ? (
+            <div className="p-8 text-center text-slate-500 flex flex-col items-center gap-2">
+              <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
+              <span className="text-xs">Loading conversations...</span>
+            </div>
+          ) : conversations.length === 0 ? (
+            <div className="p-6 text-center text-slate-500 text-xs">
+              No active post conversations yet. Click "New" to start.
+            </div>
+          ) : (
+            conversations.map((conv) => {
+              const isActive = activeConv?._id === conv._id;
+              return (
+                <div
+                  key={conv._id}
+                  onClick={() => loadConversationDetails(conv._id)}
+                  className={`group relative p-3 rounded-xl cursor-pointer transition flex items-center justify-between border ${
+                    isActive
+                      ? 'bg-indigo-600/20 border-indigo-500/40 text-slate-100'
+                      : 'bg-slate-900/40 border-transparent hover:bg-slate-800/50 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 overflow-hidden">
+                    <MessageSquare
+                      className={`w-4 h-4 shrink-0 ${isActive ? 'text-indigo-400' : 'text-slate-500'}`}
+                    />
+                    <div className="truncate text-xs font-medium">
+                      <div className="truncate">{conv.title || 'Untitled Post'}</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">
+                        {new Date(conv.updatedAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={(e) => handleDelete(e, conv._id)}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 rounded-lg transition"
+                    title="Delete thread"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </aside>
+
+      {/* RIGHT ASSISTANT WORKSPACE */}
+      <section className="flex-1 bg-slate-900/70 border border-slate-800 rounded-2xl flex flex-col backdrop-blur-md overflow-hidden h-full">
+        {/* Chat Top Bar */}
+        <div className="p-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMobileSidebarOpen(true)}
+              className="md:hidden p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white"
+              title="Toggle sidebar"
+            >
+              <Menu className="w-4 h-4" />
+            </button>
+            <div>
+              <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-indigo-400" />
+                {activeConv?.title || 'Context-Aware AI Assistant'}
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5 hidden sm:block">
+                Describe your achievement or learning. Dastaan creates your post based strictly on verified context.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {activeConv && (
+              <button
+                onClick={handleOpenOrGeneratePost}
+                disabled={postLoading}
+                className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-lg shadow-indigo-600/20"
+              >
+                {postLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Edit3 className="w-3.5 h-3.5" />
+                )}
+                <span>{showEditor ? 'Post Editor Active' : 'Open Post Editor'}</span>
+              </button>
+            )}
+            {activeConv && getStatusBadge(activeConv.status)}
+          </div>
+        </div>
+
+        {/* Error Banner */}
+        {error && (
+          <div className="px-4 py-2 bg-rose-500/20 border-b border-rose-500/30 text-rose-300 text-xs flex items-center justify-between">
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="text-rose-400 hover:text-white">✕</button>
+          </div>
+        )}
+
+        {/* Primary Scroll Container: Structured Post Editor (Top) & Conversation Thread (Bottom) */}
+        <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-6">
+          {/* CANONICAL POST EDITOR EMBEDDED IN WORKSPACE */}
+          {showEditor && activePost && (
+            <div className="w-full">
+              <PostEditor
+                post={activePost}
+                onRefine={handleRefinePost}
+                onSave={handleSavePostEdits}
+                onApprove={handleApprovePost}
+                onGenerateAlternatives={handleGenerateAlternatives}
+                loading={postLoading}
+              />
+            </div>
+          )}
+
+          {/* CONVERSATION HISTORY SECTION */}
+          <div className="space-y-4 pt-2">
+            <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
+              <MessageSquare className="w-4 h-4 text-slate-400" />
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Conversation Context
+              </span>
+            </div>
+
+            {!activeConv || activeConv.messages?.length === 0 ? (
+              <div className="flex flex-col items-center justify-center text-center p-6 text-slate-400 space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-xl shadow-indigo-600/10">
+                  <Sparkles className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-200">What did you accomplish today?</h3>
+                  <p className="text-xs text-slate-400 max-w-md mt-1">
+                    Share a project milestone, learning, internship experience, or achievement.
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-xl w-full text-left pt-2">
+                  {[
+                    'I completed my AI automation internship.',
+                    'I worked with Gemini, n8n, MongoDB, and Vercel.',
+                    'I just launched our NestJS + React authentication system.',
+                    'I learned how to optimize token usage in AI workflows.',
+                  ].map((example, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setInputMessage(example)}
+                      className="p-2.5 bg-slate-800/40 hover:bg-slate-800/80 border border-slate-700/50 rounded-xl text-xs text-slate-300 hover:text-white transition flex items-center justify-between"
+                    >
+                      <span className="truncate">{example}</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-indigo-400 shrink-0 ml-2" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              activeConv.messages.map((msg, idx) => {
+                const isUser = msg.role === 'user';
+                const isDraftAction = msg.action === 'GENERATE_DRAFT';
+
+                return (
+                  <div
+                    key={idx}
+                    className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}
+                  >
+                    {!isUser && (
+                      <div className="w-8 h-8 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0 mt-1">
+                        <Bot className="w-4 h-4" />
+                      </div>
+                    )}
+
+                    <div className={`max-w-3xl w-full sm:w-auto space-y-2 ${isUser ? 'items-end' : 'items-start'}`}>
+                      <div
+                        className={`p-3.5 sm:p-4 rounded-2xl text-xs sm:text-sm leading-relaxed ${
+                          isUser
+                            ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-tr-none shadow-lg shadow-indigo-600/20 ml-auto'
+                            : 'bg-slate-800/70 border border-slate-700/60 text-slate-200 rounded-tl-none backdrop-blur-md'
+                        }`}
+                      >
+                        <FormattedText text={msg.content} />
+                      </div>
+
+                      {/* Clean Notification Card when Post Draft is ready */}
+                      {isDraftAction && (
+                        <div className="p-3.5 bg-slate-950/80 border border-emerald-500/40 rounded-xl flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span className="text-xs font-semibold text-slate-200">
+                              Canonical LinkedIn Post ready in Editor above
+                            </span>
+                          </div>
+                          <button
+                            onClick={handleOpenOrGeneratePost}
+                            className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold transition shrink-0 flex items-center gap-1"
+                          >
+                            <Edit3 className="w-3 h-3" />
+                            <span>View Editor</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {isUser && (
+                      <div className="w-8 h-8 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 shrink-0 mt-1">
+                        <User className="w-4 h-4" />
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+
+            {sending && (
+              <div className="flex gap-3 items-center">
+                <div className="w-8 h-8 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+                  <Bot className="w-4 h-4" />
+                </div>
+                <div className="p-3 bg-slate-800/50 border border-slate-700/50 rounded-2xl text-xs text-slate-400 flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+                  <span>Dastaan AI is analyzing context...</span>
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+        </div>
+
+        {/* Fixed Input Composer at Bottom */}
+        <form onSubmit={handleSend} className="p-3 sm:p-4 border-t border-slate-800 bg-slate-950/80 shrink-0">
+          <div className="relative flex items-center">
+            <textarea
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              placeholder="Message Dastaan assistant (e.g. 'I completed my AI automation internship using Gemini and n8n')..."
+              rows={2}
+              disabled={sending}
+              className="w-full pl-4 pr-12 py-3 bg-slate-900 border border-slate-800 rounded-xl text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/60 resize-none"
+            />
+            <button
+              type="submit"
+              disabled={!inputMessage.trim() || sending}
+              className="absolute right-3 p-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:hover:bg-indigo-600 text-white rounded-xl transition shadow-md shadow-indigo-600/20"
+            >
+              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            </button>
+          </div>
+          <div className="flex items-center justify-between mt-2 text-[10px] sm:text-xs text-slate-500 px-1">
+            <span>Shift + Enter for new line</span>
+            <span>Zero-fabrication context grounding active</span>
+          </div>
+        </form>
+      </section>
+    </div>
+  );
+}

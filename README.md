@@ -204,4 +204,4 @@ Interactive Swagger documentation is live at `http://localhost:5000/api/docs`.
 ---
 
 ## 📄 License
-UNLICENSED — Proprietary to Dastaan Writer Project.
+Muhammad Zeeshan Qasim — Proprietary to Dastaan Writer Project.

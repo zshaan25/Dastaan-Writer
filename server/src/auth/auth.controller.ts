@@ -62,6 +62,14 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
+  @Post('reset-password')
+  @ApiOperation({ summary: 'Reset user password', description: 'Allows resetting user password by email.' })
+  @ApiResponse({ status: 200, description: 'Password reset successfully.' })
+  @ApiResponse({ status: 401, description: 'No account found with this email address.' })
+  async resetPassword(@Body() resetDto: { email: string; newPassword: string }) {
+    return this.authService.resetPassword(resetDto.email, resetDto.newPassword);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get('me')
   @ApiBearerAuth('JWT-auth')

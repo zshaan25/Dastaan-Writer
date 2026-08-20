@@ -38,33 +38,33 @@ export class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen w-full bg-slate-950 flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-slate-900/90 border border-slate-800 rounded-2xl p-6 sm:p-8 text-center space-y-5 shadow-2xl backdrop-blur-md">
-            <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 mx-auto shadow-lg shadow-rose-500/10">
-              <AlertTriangle className="w-7 h-7" />
+        <div className="min-h-screen w-full bg-black flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-zinc-950 border border-zinc-800 rounded-xl p-6 sm:p-8 text-center space-y-5">
+            <div className="w-12 h-12 rounded-lg bg-zinc-900 border border-rose-500/30 flex items-center justify-center text-rose-400 mx-auto">
+              <AlertTriangle className="w-6 h-6" />
             </div>
 
             <div className="space-y-1.5">
-              <h2 className="text-lg font-bold text-slate-100">Something went wrong</h2>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                An unexpected interface error occurred. Our monitoring system has captured this event for investigation.
+              <h2 className="text-base font-bold text-zinc-100">Something went wrong</h2>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                An unexpected studio error occurred. Our system has logged this incident.
               </p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
               <button
                 onClick={this.handleReload}
-                className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold transition flex items-center justify-center gap-2 shadow-md shadow-indigo-600/20"
+                className="flex-1 px-4 py-2 bg-emerald-400 hover:bg-emerald-300 text-black rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 <span>Reload Page</span>
               </button>
               <button
                 onClick={this.handleReset}
-                className="flex-1 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-2 border border-slate-700"
+                className="flex-1 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 rounded-lg text-xs font-medium transition flex items-center justify-center gap-1.5 border border-zinc-800"
               >
-                <Home className="w-3.5 h-3.5" />
-                <span>Return to Home</span>
+                <Home className="w-3.5 h-3.5 text-zinc-400" />
+                <span>Studio Home</span>
               </button>
             </div>
           </div>

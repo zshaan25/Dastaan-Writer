@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { UserPlus, Feather, AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { DastaanLogo } from '../components/DastaanLogo';
+import { ForgotPasswordModal } from '../components/auth/ForgotPasswordModal';
 
 export const RegisterPage = () => {
   const [name, setName] = useState('');
@@ -10,6 +12,7 @@ export const RegisterPage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [isForgotOpen, setIsForgotOpen] = useState(false);
 
   const { register, login } = useAuth();
   const navigate = useNavigate();
@@ -22,7 +25,7 @@ export const RegisterPage = () => {
 
     try {
       await register(name, email, password);
-      setSuccess('Account created successfully! Logging you in...');
+      setSuccess('Account created. Logging you in...');
       
       // Auto-login after registration
       setTimeout(async () => {
@@ -38,83 +41,101 @@ export const RegisterPage = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto py-12 px-4">
-      <div className="glass-card p-8 rounded-2xl space-y-6 shadow-2xl border border-slate-800">
+    <div className="max-w-sm mx-auto py-12 px-4">
+      <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-8 space-y-6">
         <div className="text-center space-y-2">
-          <div className="inline-flex p-3 bg-purple-600/20 text-purple-400 rounded-xl border border-purple-500/30 mb-2">
-            <UserPlus className="w-6 h-6" />
-          </div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">Create your Dastaan Account</h2>
-          <p className="text-xs text-slate-400">Join to transform your career experience into authentic content</p>
+          <DastaanLogo size={44} className="mx-auto rounded-xl shadow-md" />
+          <h2 className="text-lg font-bold text-white tracking-tight">Join Dastaan</h2>
+          <p className="text-xs text-zinc-500">Create your account to start generating LinkedIn content</p>
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 p-3 bg-red-950/50 border border-red-800/60 rounded-xl text-red-300 text-xs">
-            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+          <div className="flex items-center gap-2 p-3 bg-zinc-900 border border-rose-500/30 rounded-lg text-rose-300 text-xs font-mono">
+            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {success && (
-          <div className="flex items-center gap-2 p-3 bg-emerald-950/50 border border-emerald-800/60 rounded-xl text-emerald-300 text-xs">
+          <div className="flex items-center gap-2 p-3 bg-zinc-900 border border-emerald-500/30 rounded-lg text-emerald-300 text-xs font-mono">
             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>{success}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">Full Name</label>
+          <div className="space-y-1">
+            <label className="block text-xs font-mono uppercase text-zinc-400">Full Name</label>
             <input
               type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Alex Rivers"
-              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              className="w-full pb-2 pt-1 bg-transparent border-b border-zinc-800 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-emerald-400 transition-colors"
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">Email Address</label>
+          <div className="space-y-1">
+            <label className="block text-xs font-mono uppercase text-zinc-400">Email Address</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="alex@example.com"
-              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              className="w-full pb-2 pt-1 bg-transparent border-b border-zinc-800 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-emerald-400 transition-colors"
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">Password</label>
+          <div className="space-y-1">
+            <label className="block text-xs font-mono uppercase text-zinc-400">Password</label>
             <input
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Minimum 6 characters"
-              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              className="w-full pb-2 pt-1 bg-transparent border-b border-zinc-800 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-emerald-400 transition-colors"
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 text-white py-2.5 rounded-xl font-medium text-sm transition duration-150 shadow-lg shadow-purple-600/20 disabled:opacity-50"
-          >
-            {submitting ? 'Registering...' : 'Create Account'} <ArrowRight className="w-4 h-4" />
-          </button>
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full flex items-center justify-center gap-2 bg-emerald-400 hover:bg-emerald-300 text-black py-2.5 rounded-lg font-semibold text-xs transition disabled:opacity-50"
+            >
+              {submitting ? 'Creating account...' : 'Create Account'} <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </form>
 
-        <div className="text-center pt-2 border-t border-slate-800 text-xs text-slate-400">
-          Already have an account?{' '}
-          <Link to="/login" className="text-purple-400 hover:text-purple-300 font-medium">
-            Sign in
-          </Link>
+        <div className="text-center pt-2 border-t border-zinc-800/80 text-xs text-zinc-500 space-y-1.5">
+          <div>
+            Already have an account?{' '}
+            <Link to="/login" className="text-zinc-300 hover:text-emerald-400 font-medium transition">
+              Sign in
+            </Link>
+          </div>
+          <div>
+            <button
+              type="button"
+              onClick={() => setIsForgotOpen(true)}
+              className="text-[11px] text-zinc-500 hover:text-emerald-400 hover:underline font-mono transition"
+            >
+              Forgot or need to change password?
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      <ForgotPasswordModal
+        isOpen={isForgotOpen}
+        onClose={() => setIsForgotOpen(false)}
+        defaultEmail={email}
+      />
     </div>
   );
 };

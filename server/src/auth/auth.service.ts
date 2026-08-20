@@ -64,4 +64,26 @@ export class AuthService {
       user: userObject,
     };
   }
+
+  async resetPassword(email: string, newPassword: string) {
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await this.usersService.findByEmail(normalizedEmail);
+    if (!user) {
+      throw new UnauthorizedException('No account found with this email address');
+    }
+
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    await this.usersService.updateProfile(user._id.toString(), {
+      // update password via mongoose document save or direct update
+    });
+
+    user.password = hashedPassword;
+    await user.save();
+
+    return {
+      message: 'Password reset successfully. You can now log in with your new password.',
+    };
+  }
 }

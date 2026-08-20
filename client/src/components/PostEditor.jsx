@@ -53,7 +53,6 @@ export function PostEditor({
   const [emailSuccess, setEmailSuccess] = useState(false);
   const [emailError, setEmailError] = useState(null);
 
-  // Synchronize state when post prop updates from server
   useEffect(() => {
     if (post) {
       setHook(post.hook || '');
@@ -201,56 +200,49 @@ export function PostEditor({
   const charCount = fullPostText.length;
 
   return (
-    <div className="w-full bg-slate-900/90 border border-slate-800 rounded-2xl flex flex-col shadow-2xl backdrop-blur-md overflow-hidden">
+    <div className="w-full bg-zinc-950 border border-zinc-800 rounded-xl flex flex-col overflow-hidden">
       {/* 1. TOP HEADER & METADATA BAR */}
-      <div className="p-4 sm:p-5 border-b border-slate-800 bg-slate-950/70 flex flex-wrap items-center justify-between gap-3">
+      <div className="p-4 border-b border-zinc-800 bg-zinc-950 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
-            <FileText className="w-5 h-5" />
+          <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-300">
+            <FileText className="w-4 h-4 text-emerald-400" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-slate-100">Canonical Post Workspace</h3>
+              <h3 className="text-sm font-semibold text-white">Post Studio</h3>
               <span
-                className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full border ${
+                className={`px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider rounded border ${
                   post.status === 'APPROVED'
-                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                    : post.status === 'EDITED'
-                    ? 'bg-blue-500/20 text-blue-300 border-blue-500/30'
-                    : post.status === 'READY_FOR_REVIEW'
-                    ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
-                    : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-semibold'
+                    : 'bg-zinc-900 text-zinc-400 border-zinc-800'
                 }`}
               >
                 {post.status || 'DRAFT'}
               </span>
             </div>
-            <p className="text-[11px] text-slate-400">
-              Single source of truth. Edit fields, apply AI refinements, or review live preview.
-            </p>
           </div>
         </div>
 
         {/* Type & Tone Controls */}
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1">
-            <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Type:</span>
+          <div className="flex items-center gap-1.5 bg-zinc-900/80 border border-zinc-800 rounded-lg px-2 py-1">
+            <span className="text-[10px] uppercase font-mono text-zinc-500">Type</span>
             <select
               value={postType}
               onChange={(e) => setPostType(e.target.value)}
-              className="bg-transparent text-xs font-semibold text-slate-200 focus:outline-none cursor-pointer"
+              className="bg-transparent text-xs text-zinc-200 focus:outline-none cursor-pointer"
             >
-              <option value="ACHIEVEMENT" className="bg-slate-900">Achievement</option>
-              <option value="PROJECT" className="bg-slate-900">Project</option>
-              <option value="LEARNING" className="bg-slate-900">Learning</option>
-              <option value="CAREER_UPDATE" className="bg-slate-900">Career Update</option>
-              <option value="ANNOUNCEMENT" className="bg-slate-900">Announcement</option>
-              <option value="THOUGHT_LEADERSHIP" className="bg-slate-900">Thought Leadership</option>
+              <option value="ACHIEVEMENT" className="bg-zinc-900">Achievement</option>
+              <option value="PROJECT" className="bg-zinc-900">Project</option>
+              <option value="LEARNING" className="bg-zinc-900">Learning</option>
+              <option value="CAREER_UPDATE" className="bg-zinc-900">Career Update</option>
+              <option value="ANNOUNCEMENT" className="bg-zinc-900">Announcement</option>
+              <option value="THOUGHT_LEADERSHIP" className="bg-zinc-900">Thought Leadership</option>
             </select>
           </div>
 
-          <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1">
-            <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Tone:</span>
+          <div className="flex items-center gap-1.5 bg-zinc-900/80 border border-zinc-800 rounded-lg px-2 py-1">
+            <span className="text-[10px] uppercase font-mono text-zinc-500">Tone</span>
             <select
               value={tone}
               onChange={(e) => {
@@ -258,31 +250,31 @@ export function PostEditor({
                 setTone(newT);
                 handleAction('CHANGE_TONE', newT);
               }}
-              className="bg-transparent text-xs font-semibold text-slate-200 focus:outline-none cursor-pointer"
+              className="bg-transparent text-xs text-zinc-200 focus:outline-none cursor-pointer"
             >
-              <option value="PROFESSIONAL" className="bg-slate-900">Professional</option>
-              <option value="PERSONAL" className="bg-slate-900">Personal</option>
-              <option value="TECHNICAL" className="bg-slate-900">Technical</option>
-              <option value="STORYTELLING" className="bg-slate-900">Storytelling</option>
-              <option value="CONFIDENT" className="bg-slate-900">Confident</option>
-              <option value="MINIMAL" className="bg-slate-900">Minimal</option>
+              <option value="PROFESSIONAL" className="bg-zinc-900">Professional</option>
+              <option value="PERSONAL" className="bg-zinc-900">Personal</option>
+              <option value="TECHNICAL" className="bg-zinc-900">Technical</option>
+              <option value="STORYTELLING" className="bg-zinc-900">Storytelling</option>
+              <option value="CONFIDENT" className="bg-zinc-900">Confident</option>
+              <option value="MINIMAL" className="bg-zinc-900">Minimal</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* 2. ALTERNATIVE VERSIONS SWITCHER BAR (if 3 versions exist) */}
+      {/* 2. ALTERNATIVE VERSIONS SWITCHER BAR */}
       {Array.isArray(post.versions) && post.versions.length > 0 && (
-        <div className="px-4 sm:px-6 py-2.5 bg-indigo-950/30 border-b border-indigo-900/40 flex items-center gap-2 overflow-x-auto">
-          <span className="text-[11px] font-bold text-indigo-300 flex items-center gap-1 shrink-0">
-            <Layers className="w-3.5 h-3.5 text-indigo-400" /> Variations:
+        <div className="px-4 py-2 bg-zinc-900/50 border-b border-zinc-800 flex items-center gap-2 overflow-x-auto">
+          <span className="text-[11px] font-mono text-zinc-500 flex items-center gap-1 shrink-0">
+            <Layers className="w-3.5 h-3.5 text-zinc-400" /> Variations:
           </span>
           <button
             onClick={() => handleSelectVersion('working')}
-            className={`px-3 py-1 text-xs font-semibold rounded-lg transition whitespace-nowrap ${
+            className={`px-2.5 py-1 text-xs rounded transition whitespace-nowrap ${
               activeVersionId === 'working'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                ? 'bg-zinc-800 text-emerald-400 border border-zinc-700 font-medium'
+                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'
             }`}
           >
             Working Draft
@@ -291,10 +283,10 @@ export function PostEditor({
             <button
               key={ver.id || idx}
               onClick={() => handleSelectVersion(ver)}
-              className={`px-3 py-1 text-xs font-semibold rounded-lg transition whitespace-nowrap ${
+              className={`px-2.5 py-1 text-xs rounded transition whitespace-nowrap ${
                 activeVersionId === ver.id
-                  ? 'bg-indigo-600 text-white shadow-md'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  ? 'bg-zinc-800 text-emerald-400 border border-zinc-700 font-medium'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'
               }`}
             >
               {ver.label || `Version ${idx + 1}`}
@@ -305,32 +297,32 @@ export function PostEditor({
 
       {/* 3. MAIN WORKSPACE: 2-COLUMN SPLIT */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 sm:p-6 items-start">
-        {/* LEFT COLUMN: STRUCTURED FIELD EDITOR & REFINEMENTS (7 COLS) */}
-        <div className="lg:col-span-7 flex flex-col space-y-5">
-          {/* HOOK FIELD */}
-          <div className="space-y-1.5">
+        {/* LEFT COLUMN: STRUCTURED SEAMLESS FORM CONTROLS (7 COLS) */}
+        <div className="lg:col-span-7 flex flex-col space-y-6">
+          {/* HOOK FIELD (SEAMLESS WITH GLOWING BOTTOM BORDER) */}
+          <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-indigo-400" /> Hook (Opening Line)
+              <label className="text-xs font-mono uppercase text-zinc-400 flex items-center gap-1.5">
+                <span>Hook (Opening Line)</span>
               </label>
-              <span className="text-[10px] text-slate-500 font-mono">{hook.length} chars</span>
+              <span className="text-[10px] text-zinc-500 font-mono">{hook.length} chars</span>
             </div>
             <input
               type="text"
               value={hook}
               onChange={(e) => setHook(e.target.value)}
-              placeholder="e.g. Completing my AI automation internship taught me one critical lesson about scalable workflows."
-              className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-xs sm:text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500 font-medium"
+              placeholder="Write a clear, compelling opening statement..."
+              className="w-full pb-2 pt-1 bg-transparent border-b border-zinc-800 text-sm font-medium text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-emerald-400 transition-colors"
             />
           </div>
 
-          {/* BODY FIELD */}
+          {/* BODY FIELD (SEAMLESS WITH GLOWING LEFT ACCENT BORDER) */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5 text-indigo-400" /> Post Body
+              <label className="text-xs font-mono uppercase text-zinc-400 flex items-center gap-1.5">
+                <span>Post Body</span>
               </label>
-              <div className="flex items-center gap-2 text-[10px] text-slate-500 font-mono">
+              <div className="flex items-center gap-2 text-[10px] text-zinc-500 font-mono">
                 <span>{wordCount} words</span>
                 <span>•</span>
                 <span>{body.length} chars</span>
@@ -340,91 +332,93 @@ export function PostEditor({
               rows={9}
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              placeholder="Detail the experience, what tools you used, technical challenges overcome, and concrete insights..."
-              className="w-full px-3.5 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-xs sm:text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500 leading-relaxed resize-y font-sans"
+              placeholder="Detail your insight, workflow, technical takeaways, or project milestones..."
+              className="w-full pl-3.5 py-1.5 bg-transparent border-l-2 border-zinc-800 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-emerald-400 leading-relaxed resize-y transition-colors font-sans"
             />
           </div>
 
-          {/* CALL TO ACTION FIELD */}
-          <div className="space-y-1.5">
+          {/* CALL TO ACTION FIELD (SEAMLESS WITH GLOWING BOTTOM BORDER) */}
+          <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                <Send className="w-3.5 h-3.5 text-indigo-400" /> Call to Action (CTA)
+              <label className="text-xs font-mono uppercase text-zinc-400 flex items-center gap-1.5">
+                <span>Call to Action</span>
               </label>
-              <span className="text-[10px] text-slate-500">Optional closing prompt</span>
+              <span className="text-[10px] text-zinc-600 font-mono">Optional closing prompt</span>
             </div>
             <input
               type="text"
               value={cta}
               onChange={(e) => setCta(e.target.value)}
-              placeholder="e.g. What automation patterns have made the biggest difference in your team's workflow?"
-              className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-xs sm:text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500 font-medium"
+              placeholder="e.g. What approach has worked best for your team?"
+              className="w-full pb-2 pt-1 bg-transparent border-b border-zinc-800 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-emerald-400 transition-colors"
             />
           </div>
 
-          {/* HASHTAGS & MENTIONS CHIP EDITORS */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Hashtags Chip Editor */}
-            <div className="p-3.5 bg-slate-950/60 border border-slate-800/80 rounded-xl space-y-2">
-              <label className="text-xs font-bold text-slate-200 flex items-center gap-1">
-                <Tag className="w-3.5 h-3.5 text-indigo-400" /> Hashtags ({hashtags.length})
-              </label>
-              <div className="flex flex-wrap gap-1.5 min-h-[32px]">
+          {/* HASHTAGS & MENTIONS EDITORS */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+            {/* Hashtags */}
+            <div className="p-3 bg-zinc-900/30 border border-zinc-800/80 rounded-lg space-y-2">
+              <div className="flex items-center justify-between text-xs text-zinc-400 font-mono">
+                <span className="flex items-center gap-1">
+                  <Tag className="w-3 h-3 text-zinc-500" /> Hashtags ({hashtags.length})
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1 min-h-[28px]">
                 {hashtags.map((tag) => (
                   <span
                     key={tag}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-950/60 border border-indigo-800/60 text-indigo-300 font-mono text-[11px] font-medium"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300 font-mono text-[11px]"
                   >
                     {tag}
                     <button
                       type="button"
                       onClick={() => handleRemoveTag(tag)}
-                      className="hover:text-rose-400 transition"
-                      title="Remove tag"
+                      className="text-zinc-500 hover:text-zinc-200"
                     >
                       <X className="w-3 h-3" />
                     </button>
                   </span>
                 ))}
               </div>
-              <form onSubmit={handleAddTag} className="flex gap-1.5 pt-1">
+              <form onSubmit={handleAddTag} className="flex gap-1 pt-1">
                 <input
                   type="text"
                   value={newTag}
                   onChange={(e) => setNewTag(e.target.value)}
                   placeholder="Add #tag..."
-                  className="flex-1 px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-mono"
+                  className="flex-1 px-2 py-1 bg-zinc-900 border border-zinc-800 rounded text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-emerald-400 font-mono"
                 />
                 <button
                   type="submit"
                   disabled={!newTag.trim()}
-                  className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 rounded-lg text-xs transition"
+                  className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded text-xs transition disabled:opacity-40"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="w-3 h-3" />
                 </button>
               </form>
             </div>
 
-            {/* Mentions Chip Editor */}
-            <div className="p-3.5 bg-slate-950/60 border border-slate-800/80 rounded-xl space-y-2">
-              <label className="text-xs font-bold text-slate-200 flex items-center gap-1">
-                <AtSign className="w-3.5 h-3.5 text-indigo-400" /> Mentions ({mentions.length})
-              </label>
-              <div className="flex flex-wrap gap-1.5 min-h-[32px]">
+            {/* Mentions */}
+            <div className="p-3 bg-zinc-900/30 border border-zinc-800/80 rounded-lg space-y-2">
+              <div className="flex items-center justify-between text-xs text-zinc-400 font-mono">
+                <span className="flex items-center gap-1">
+                  <AtSign className="w-3 h-3 text-zinc-500" /> Mentions ({mentions.length})
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1 min-h-[28px]">
                 {mentions.length === 0 ? (
-                  <span className="text-[11px] text-slate-500 italic">No mentions tagged</span>
+                  <span className="text-[11px] text-zinc-600 italic">No mentions</span>
                 ) : (
                   mentions.map((mention) => (
                     <span
                       key={mention}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-[11px] font-medium"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300 text-[11px]"
                     >
                       {mention}
                       <button
                         type="button"
                         onClick={() => handleRemoveMention(mention)}
-                        className="hover:text-rose-400 transition"
-                        title="Remove mention"
+                        className="text-zinc-500 hover:text-zinc-200"
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -432,123 +426,64 @@ export function PostEditor({
                   ))
                 )}
               </div>
-              <form onSubmit={handleAddMention} className="flex gap-1.5 pt-1">
+              <form onSubmit={handleAddMention} className="flex gap-1 pt-1">
                 <input
                   type="text"
                   value={newMention}
                   onChange={(e) => setNewMention(e.target.value)}
                   placeholder="Add @mention..."
-                  className="flex-1 px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                  className="flex-1 px-2 py-1 bg-zinc-900 border border-zinc-800 rounded text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-emerald-400"
                 />
                 <button
                   type="submit"
                   disabled={!newMention.trim()}
-                  className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 rounded-lg text-xs transition"
+                  className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded text-xs transition disabled:opacity-40"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="w-3 h-3" />
                 </button>
               </form>
             </div>
           </div>
 
-          {/* 4. AI REFINEMENT CONTROLS GROUP */}
-          <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-3">
+          {/* 4. MINIMAL REFINEMENT ACTION BAR (LOW-OPACITY TEXT LINKS) */}
+          <div className="pt-2 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                <Sliders className="w-3.5 h-3.5 text-indigo-400" /> AI Refinements & Transformations
+              <span className="text-[11px] font-mono uppercase text-zinc-500">
+                AI Transformations
               </span>
-              <span className="text-[10px] text-slate-500">Operates on current working draft</span>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => handleAction('REGENERATE')}
-                disabled={loading}
-                className="px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 disabled:opacity-50 text-xs font-medium rounded-lg transition flex items-center gap-1.5 border border-slate-700"
-              >
-                {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" /> : <RefreshCw className="w-3.5 h-3.5 text-indigo-400" />}
-                <span>Regenerate</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleAction('IMPROVE_HOOK')}
-                disabled={loading}
-                className="px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 disabled:opacity-50 text-xs font-medium rounded-lg transition flex items-center gap-1.5 border border-slate-700"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>Improve Hook</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleAction('MAKE_SHORTER')}
-                disabled={loading}
-                className="px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 disabled:opacity-50 text-xs font-medium rounded-lg transition flex items-center gap-1.5 border border-slate-700"
-              >
-                <Scissors className="w-3.5 h-3.5 text-blue-400" />
-                <span>Make Shorter</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleAction('MAKE_MORE_PERSONAL')}
-                disabled={loading}
-                className="px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 disabled:opacity-50 text-xs font-medium rounded-lg transition flex items-center gap-1.5 border border-slate-700"
-              >
-                <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Make Personal</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleAction('MAKE_MORE_TECHNICAL')}
-                disabled={loading}
-                className="px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 disabled:opacity-50 text-xs font-medium rounded-lg transition flex items-center gap-1.5 border border-slate-700"
-              >
-                <Code className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Make Technical</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleAction('MAKE_MORE_PROFESSIONAL')}
-                disabled={loading}
-                className="px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 disabled:opacity-50 text-xs font-medium rounded-lg transition flex items-center gap-1.5 border border-slate-700"
-              >
-                <Zap className="w-3.5 h-3.5 text-purple-400" />
-                <span>Make Professional</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleAction('IMPROVE_FLOW')}
-                disabled={loading}
-                className="px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 disabled:opacity-50 text-xs font-medium rounded-lg transition flex items-center gap-1.5 border border-slate-700"
-              >
-                <Layers className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Improve Flow</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleAction('SIMPLIFY')}
-                disabled={loading}
-                className="px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 disabled:opacity-50 text-xs font-medium rounded-lg transition flex items-center gap-1.5 border border-slate-700"
-              >
-                <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
-                <span>Simplify</span>
-              </button>
+            <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
+              {[
+                { label: 'Regenerate', action: 'REGENERATE', icon: RefreshCw },
+                { label: 'Improve Hook', action: 'IMPROVE_HOOK', icon: Sparkles },
+                { label: 'Make Shorter', action: 'MAKE_SHORTER', icon: Scissors },
+                { label: 'Personal', action: 'MAKE_MORE_PERSONAL', icon: UserCheck },
+                { label: 'Technical', action: 'MAKE_MORE_TECHNICAL', icon: Code },
+                { label: 'Professional', action: 'MAKE_MORE_PROFESSIONAL', icon: Zap },
+                { label: 'Flow', action: 'IMPROVE_FLOW', icon: Layers },
+                { label: 'Simplify', action: 'SIMPLIFY', icon: RotateCcw },
+              ].map(({ label, action, icon: Icon }) => (
+                <button
+                  key={action}
+                  type="button"
+                  onClick={() => handleAction(action)}
+                  disabled={loading}
+                  className="text-xs text-zinc-400 hover:text-emerald-400 hover:bg-zinc-900 px-2.5 py-1 rounded transition-colors disabled:opacity-40 flex items-center gap-1"
+                >
+                  <Icon className="w-3 h-3" />
+                  <span>{label}</span>
+                </button>
+              ))}
 
               {cta ? (
                 <button
                   type="button"
                   onClick={() => handleAction('REMOVE_CTA')}
                   disabled={loading}
-                  className="px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 disabled:opacity-50 text-xs font-medium rounded-lg transition flex items-center gap-1.5 border border-slate-700"
+                  className="text-xs text-zinc-400 hover:text-rose-400 hover:bg-zinc-900 px-2.5 py-1 rounded transition-colors disabled:opacity-40 flex items-center gap-1"
                 >
-                  <X className="w-3.5 h-3.5 text-rose-400" />
+                  <X className="w-3 h-3" />
                   <span>Remove CTA</span>
                 </button>
               ) : (
@@ -556,9 +491,9 @@ export function PostEditor({
                   type="button"
                   onClick={() => handleAction('ADD_CTA')}
                   disabled={loading}
-                  className="px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 disabled:opacity-50 text-xs font-medium rounded-lg transition flex items-center gap-1.5 border border-slate-700"
+                  className="text-xs text-zinc-400 hover:text-emerald-400 hover:bg-zinc-900 px-2.5 py-1 rounded transition-colors disabled:opacity-40 flex items-center gap-1"
                 >
-                  <PlusCircle className="w-3.5 h-3.5 text-emerald-400" />
+                  <PlusCircle className="w-3 h-3" />
                   <span>Add CTA</span>
                 </button>
               )}
@@ -568,9 +503,9 @@ export function PostEditor({
                   type="button"
                   onClick={onGenerateAlternatives}
                   disabled={loading}
-                  className="px-3 py-1.5 bg-gradient-to-r from-indigo-600/30 to-purple-600/30 hover:from-indigo-600/50 hover:to-purple-600/50 text-indigo-200 disabled:opacity-50 text-xs font-semibold rounded-lg transition flex items-center gap-1.5 border border-indigo-500/40"
+                  className="text-xs text-emerald-400/90 hover:text-emerald-300 hover:bg-zinc-900 px-2.5 py-1 rounded border border-emerald-500/20 transition-colors disabled:opacity-40 flex items-center gap-1 ml-auto font-medium"
                 >
-                  {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Layers className="w-3.5 h-3.5 text-indigo-400" />}
+                  <Layers className="w-3 h-3 text-emerald-400" />
                   <span>3 Versions</span>
                 </button>
               )}
@@ -578,70 +513,70 @@ export function PostEditor({
           </div>
         </div>
 
-        {/* RIGHT COLUMN: LIVE LINKEDIN PREVIEW (5 COLS) */}
+        {/* RIGHT COLUMN: CRISP LIVE PREVIEW (5 COLS) */}
         <div className="lg:col-span-5 flex flex-col space-y-3 sticky top-4">
-          <div className="flex items-center justify-between pb-1">
-            <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4" /> Live LinkedIn Preview
+          <div className="flex items-center justify-between pb-0.5">
+            <span className="text-xs font-mono uppercase text-zinc-400 flex items-center gap-1.5">
+              <span>Preview</span>
             </span>
-            <span className="text-[11px] text-slate-500">Real-time formatting</span>
+            <span className="text-[10px] text-zinc-600 font-mono">Live Formatting</span>
           </div>
 
           {/* LinkedIn Simulated Post Card */}
-          <div className="p-4 sm:p-5 bg-slate-950/90 border border-slate-800 rounded-2xl shadow-2xl space-y-3 font-sans">
+          <div className="p-5 bg-zinc-900/40 border border-zinc-800 rounded-xl space-y-3 font-sans">
             {/* Header Mock */}
-            <div className="flex items-center gap-3 pb-2 border-b border-slate-800/80">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
+            <div className="flex items-center gap-3 pb-3 border-b border-zinc-800/80">
+              <div className="w-9 h-9 rounded-full bg-black border border-zinc-800 flex items-center justify-center text-emerald-400 font-mono font-bold text-xs">
                 D
               </div>
               <div>
-                <div className="text-xs font-bold text-slate-100">Dastaan Member</div>
-                <div className="text-[10px] text-slate-400">Content Creator & Engineer • Just now</div>
+                <div className="text-xs font-semibold text-zinc-100">Member</div>
+                <div className="text-[10px] text-zinc-500 font-mono">Just now</div>
               </div>
             </div>
 
             {/* Hook */}
             {hook ? (
-              <div className="text-xs sm:text-sm font-bold text-slate-100 leading-snug">
+              <div className="text-xs sm:text-sm font-semibold text-zinc-100 leading-snug">
                 <FormattedText text={hook} />
               </div>
             ) : (
-              <div className="text-xs text-slate-600 italic">No hook written yet...</div>
+              <div className="text-xs text-zinc-600 italic">No hook entered...</div>
             )}
 
             {/* Body */}
             {body ? (
-              <div className="text-xs sm:text-sm text-slate-200 leading-relaxed">
+              <div className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
                 <FormattedText text={body} />
               </div>
             ) : (
-              <div className="text-xs text-slate-600 italic">No body content yet...</div>
+              <div className="text-xs text-zinc-600 italic">No body text...</div>
             )}
 
             {/* CTA */}
             {cta && (
-              <div className="text-xs sm:text-sm font-semibold text-indigo-300 pt-1">
+              <div className="text-xs sm:text-sm font-medium text-emerald-400/90 pt-1">
                 <FormattedText text={cta} />
               </div>
             )}
 
             {/* Hashtags */}
             {hashtags.length > 0 && (
-              <div className="text-xs text-indigo-400 font-mono font-medium pt-1 leading-relaxed">
+              <div className="text-xs text-zinc-400 font-mono pt-1 leading-relaxed">
                 {hashtags.join(' ')}
               </div>
             )}
 
             {/* Mentions */}
             {mentions.length > 0 && (
-              <div className="text-xs text-slate-400 font-medium">
+              <div className="text-xs text-zinc-500 font-medium">
                 {mentions.join(' ')}
               </div>
             )}
           </div>
 
           {emailError && (
-            <div className="p-3 bg-rose-950/60 border border-rose-800/80 rounded-xl text-xs text-rose-300 flex items-center justify-between">
+            <div className="p-3 bg-zinc-900 border border-rose-500/30 rounded-lg text-xs text-rose-300 flex items-center justify-between">
               <span>{emailError}</span>
               <button onClick={() => setEmailError(null)} className="text-rose-400 hover:text-white">✕</button>
             </div>
@@ -649,91 +584,87 @@ export function PostEditor({
         </div>
       </div>
 
-      {/* 5. BOTTOM OUTPUT ACTIONS BAR (SEPARATED FROM REFINEMENTS) */}
-      <div className="p-4 sm:p-5 border-t border-slate-800 bg-slate-950/90 flex flex-wrap items-center justify-between gap-3">
-        <div className="text-xs text-slate-400 flex items-center gap-2">
+      {/* 5. BOTTOM OUTPUT ACTIONS BAR */}
+      <div className="p-4 border-t border-zinc-800 bg-zinc-950 flex flex-wrap items-center justify-between gap-3">
+        <div className="text-xs text-zinc-400">
           {saveSuccess ? (
-            <span className="text-emerald-400 flex items-center gap-1 font-semibold">
-              <Check className="w-4 h-4" /> Draft saved to MongoDB!
+            <span className="text-emerald-400 flex items-center gap-1 font-mono">
+              <Check className="w-3.5 h-3.5" /> Saved to workspace.
             </span>
           ) : approveSuccess ? (
-            <span className="text-emerald-400 flex items-center gap-1 font-semibold">
-              <CheckCircle2 className="w-4 h-4" /> Post approved and ready!
+            <span className="text-emerald-400 flex items-center gap-1 font-mono">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Post approved.
             </span>
           ) : (
-            <span>Changes in working draft can be saved, copied, or emailed.</span>
+            <span className="text-zinc-500 text-[11px] font-mono">Working draft ready for review.</span>
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* 1. SAVE DRAFT */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* SAVE DRAFT */}
           <button
             type="button"
             onClick={handleSaveManualEdits}
             disabled={loading}
-            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 border border-slate-700 shadow-md"
+            className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-lg text-xs font-medium transition border border-zinc-800 flex items-center gap-1.5"
           >
-            {saveSuccess ? <Check className="w-4 h-4 text-emerald-400" /> : <Save className="w-4 h-4 text-slate-300" />}
-            <span>{saveSuccess ? 'Saved' : 'Save Draft'}</span>
+            {saveSuccess ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Save className="w-3.5 h-3.5 text-zinc-400" />}
+            <span>{saveSuccess ? 'Saved' : 'Save'}</span>
           </button>
 
-          {/* 2. COPY POST */}
+          {/* COPY POST */}
           <button
             type="button"
             onClick={copyFullPost}
-            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 border border-slate-700 shadow-md"
+            className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-lg text-xs font-medium transition border border-zinc-800 flex items-center gap-1.5"
           >
             {copied ? (
               <>
-                <Check className="w-4 h-4 text-emerald-400" />
-                <span className="text-emerald-400">Copied!</span>
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-emerald-400">Copied</span>
               </>
             ) : (
               <>
-                <Copy className="w-4 h-4 text-slate-300" />
-                <span>Copy Post</span>
+                <Copy className="w-3.5 h-3.5 text-zinc-400" />
+                <span>Copy</span>
               </>
             )}
           </button>
 
-          {/* 3. EMAIL ME THIS POST */}
+          {/* EMAIL */}
           <button
             type="button"
             onClick={handleEmailPost}
             disabled={emailing || !post?._id}
-            title="Email this post directly to your registered email address"
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 border shadow-md ${
-              emailSuccess
-                ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700'
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700 disabled:opacity-50'
-            }`}
+            title="Email draft"
+            className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-lg text-xs font-medium transition border border-zinc-800 flex items-center gap-1.5 disabled:opacity-40"
           >
             {emailing ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
                 <span>Sending...</span>
               </>
             ) : emailSuccess ? (
               <>
-                <Check className="w-4 h-4 text-emerald-400" />
-                <span>Emailed!</span>
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-emerald-400">Sent</span>
               </>
             ) : (
               <>
-                <Mail className="w-4 h-4 text-indigo-400" />
-                <span>Email Me</span>
+                <Mail className="w-3.5 h-3.5 text-zinc-400" />
+                <span>Email</span>
               </>
             )}
           </button>
 
-          {/* 4. APPROVE */}
+          {/* APPROVE (PRIMARY NEON EMERALD ACTION) */}
           <button
             type="button"
             onClick={handleApprove}
             disabled={loading || post.status === 'APPROVED'}
-            className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-emerald-600/20"
+            className="px-4 py-1.5 bg-emerald-400 hover:bg-emerald-300 text-black rounded-lg text-xs font-semibold transition flex items-center gap-1.5 disabled:opacity-50"
           >
-            <CheckCircle2 className="w-4 h-4" />
+            <CheckCircle2 className="w-3.5 h-3.5" />
             <span>{post.status === 'APPROVED' ? 'Approved' : 'Approve Post'}</span>
           </button>
         </div>

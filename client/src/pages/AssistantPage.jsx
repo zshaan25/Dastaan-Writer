@@ -1,27 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  Sparkles,
-  Plus,
-  Trash2,
-  Send,
-  Loader2,
-  Copy,
-  Check,
-  MessageSquare,
-  FileText,
-  User,
-  Bot,
-  ArrowRight,
-  Menu,
-  X,
-  Edit3,
-  CheckCircle2,
-} from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   createConversation,
   getConversations,
   getConversationById,
   deleteConversation,
+  updateConversation,
   sendConversationMessage,
   generatePost,
   getPostById,
@@ -31,33 +14,60 @@ import {
   updatePost,
   approvePost,
 } from '../services/api';
-import { FormattedText } from '../utils/textFormatter';
-import { PostEditor } from '../components/PostEditor';
+import { useSidebarState } from '../hooks/useSidebarState';
+import { AssistantSidebar } from '../components/assistant/AssistantSidebar';
+import { AssistantHeader } from '../components/assistant/AssistantHeader';
+import { ChatMessage } from '../components/assistant/ChatMessage';
+import { ChatComposer } from '../components/assistant/ChatComposer';
+import { PostStudioDrawer } from '../components/assistant/PostStudioDrawer';
+import { ArrowDown, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function AssistantPage() {
+  const {
+    state: sidebarState,
+    toggleSidebar,
+    cycleState,
+    isMobileDrawerOpen,
+    setIsMobileDrawerOpen,
+  } = useSidebarState();
+
   const [conversations, setConversations] = useState([]);
   const [activeConv, setActiveConv] = useState(null);
   const [activePost, setActivePost] = useState(null);
-  const [showEditor, setShowEditor] = useState(false);
+  const [isStudioOpen, setIsStudioOpen] = useState(false);
   const [loadingConvs, setLoadingConvs] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
   const [postLoading, setPostLoading] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const [error, setError] = useState(null);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
+
+  const chatContainerRef = useRef(null);
   const messagesEndRef = useRef(null);
 
+  // Load conversations on mount
   useEffect(() => {
     fetchConversations();
   }, []);
 
+  // Auto-scroll to bottom on message updates or sending
   useEffect(() => {
-    scrollToBottom();
+    if (!showScrollBottom) {
+      scrollToBottom();
+    }
   }, [activeConv?.messages, sending]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // Scroll listener to show "Scroll to bottom" button
+  const handleScroll = () => {
+    if (!chatContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    setShowScrollBottom(distanceFromBottom > 150);
   };
 
   const fetchConversations = async () => {
@@ -81,14 +91,13 @@ export default function AssistantPage() {
     try {
       setLoadingMessages(true);
       setError(null);
-      setMobileSidebarOpen(false);
-      setShowEditor(false);
+      setIsMobileDrawerOpen(false);
       setActivePost(null);
 
       const convData = await getConversationById(id);
       setActiveConv(convData);
 
-      // Load single canonical post if linked to conversation
+      // Load post if available
       try {
         let postDoc = null;
         if (convData.postId) {
@@ -99,10 +108,9 @@ export default function AssistantPage() {
 
         if (postDoc) {
           setActivePost(postDoc);
-          setShowEditor(true);
         }
       } catch (postErr) {
-        // No post generated yet for this conversation
+        // No post generated yet
       }
     } catch (err) {
       console.error('Failed to load conversation:', err);
@@ -116,10 +124,10 @@ export default function AssistantPage() {
     try {
       setSending(true);
       setError(null);
-      setMobileSidebarOpen(false);
-      setShowEditor(false);
+      setIsMobileDrawerOpen(false);
       setActivePost(null);
-      const res = await createConversation({ title: 'New Dastaan Post' });
+      setIsStudioOpen(false);
+      const res = await createConversation({ title: 'New Post Thread' });
       await fetchConversations();
       await loadConversationDetails(res.conversationId);
     } catch (err) {
@@ -130,15 +138,15 @@ export default function AssistantPage() {
     }
   };
 
-  const handleDelete = async (e, id) => {
-    e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this conversation?')) return;
+  const handleDeleteConversation = async (e, id) => {
+    e?.stopPropagation();
+    if (!window.confirm('Are you sure you want to delete this thread?')) return;
     try {
       await deleteConversation(id);
       if (activeConv?._id === id) {
         setActiveConv(null);
         setActivePost(null);
-        setShowEditor(false);
+        setIsStudioOpen(false);
       }
       fetchConversations();
     } catch (err) {
@@ -147,11 +155,31 @@ export default function AssistantPage() {
     }
   };
 
-  const handleSend = async (e) => {
-    e?.preventDefault();
+  const handleRenameConversation = async (id, newTitle) => {
+    if (!newTitle.trim()) return;
+    try {
+      // Optimistic update
+      setConversations((prev) =>
+        prev.map((c) => (c._id === id ? { ...c, title: newTitle.trim() } : c))
+      );
+      if (activeConv?._id === id) {
+        setActiveConv((prev) => ({ ...prev, title: newTitle.trim() }));
+      }
+
+      await updateConversation(id, { title: newTitle.trim() });
+    } catch (err) {
+      console.error('Failed to rename conversation:', err);
+      setError('Failed to update conversation title');
+      fetchConversations();
+    }
+  };
+
+  const handleSend = async () => {
     if (!inputMessage.trim() || sending) return;
 
     let targetId = activeConv?._id;
+    const userText = inputMessage.trim();
+    setInputMessage('');
 
     try {
       setSending(true);
@@ -159,14 +187,11 @@ export default function AssistantPage() {
 
       // Auto-create conversation if none is active
       if (!targetId) {
-        const newRes = await createConversation();
+        const newRes = await createConversation({ title: userText.slice(0, 40) });
         targetId = newRes.conversationId;
       }
 
-      const userText = inputMessage.trim();
-      setInputMessage('');
-
-      // Optimistically append user message to UI
+      // Optimistic user message
       const optimisticMsg = {
         role: 'user',
         content: userText,
@@ -182,30 +207,28 @@ export default function AssistantPage() {
       setActiveConv(updatedConv);
       fetchConversations();
 
-      // If draft was generated by AI in this turn, load canonical post
+      // If draft was generated, load post and alert user
       if (updatedConv.postId) {
         try {
           const postDoc = await getPostById(updatedConv.postId);
           setActivePost(postDoc);
-          setShowEditor(true);
         } catch (e) {
           // ignore
         }
       }
     } catch (err) {
       console.error('Failed to send message:', err);
-      setError(err.response?.data?.message || 'Failed to send message to Dastaan AI');
+      setError(err.response?.data?.message || 'Failed to send message to assistant');
     } finally {
       setSending(false);
     }
   };
 
-  const handleOpenOrGeneratePost = async () => {
+  const handleOpenStudio = async () => {
     if (!activeConv?._id) return;
 
-    // 1. If activePost is already loaded in memory, simply ensure editor is open
     if (activePost) {
-      setShowEditor(true);
+      setIsStudioOpen(true);
       return;
     }
 
@@ -213,7 +236,6 @@ export default function AssistantPage() {
       setPostLoading(true);
       setError(null);
 
-      // 2. Check if a canonical post already exists on the server for this conversation
       let postDoc = null;
       try {
         if (activeConv.postId) {
@@ -225,7 +247,6 @@ export default function AssistantPage() {
         // Not found yet
       }
 
-      // 3. If no post exists on server, generate one
       if (!postDoc) {
         postDoc = await generatePost({
           conversationId: activeConv._id,
@@ -235,7 +256,7 @@ export default function AssistantPage() {
       }
 
       setActivePost(postDoc);
-      setShowEditor(true);
+      setIsStudioOpen(true);
     } catch (err) {
       console.error('Failed to load or generate post:', err);
       setError(err.response?.data?.message || 'Failed to open post editor');
@@ -306,332 +327,138 @@ export default function AssistantPage() {
     }
   };
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'DRAFT_GENERATED':
-        return (
-          <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-            Draft Ready
-          </span>
-        );
-      case 'READY_FOR_DRAFT':
-        return (
-          <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
-            Ready for Draft
-          </span>
-        );
-      case 'COMPLETED':
-        return (
-          <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-            Completed
-          </span>
-        );
-      default:
-        return (
-          <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-            Collecting Context
-          </span>
-        );
-    }
-  };
-
   return (
-    <div className="h-full w-full flex overflow-hidden p-2 sm:p-4 gap-3 md:gap-4 relative">
-      {/* MOBILE OVERLAY BACKDROP */}
-      {mobileSidebarOpen && (
-        <div
-          onClick={() => setMobileSidebarOpen(false)}
-          className="md:hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40"
+    <div className="h-full w-full flex bg-black text-zinc-100 overflow-hidden font-sans antialiased relative">
+      {/* 1. COLLAPSIBLE MULTI-STATE SIDEBAR */}
+      <AssistantSidebar
+        sidebarState={sidebarState}
+        onToggle={toggleSidebar}
+        onCycle={cycleState}
+        conversations={conversations}
+        activeConvId={activeConv?._id}
+        onSelectConv={loadConversationDetails}
+        onCreateNew={handleCreateNew}
+        onDeleteConv={handleDeleteConversation}
+        onRenameConv={handleRenameConversation}
+        loading={loadingConvs}
+        isMobileOpen={isMobileDrawerOpen}
+        onCloseMobile={() => setIsMobileDrawerOpen(false)}
+      />
+
+      {/* 2. MAIN FULL-SCREEN ASSISTANT CANVAS */}
+      <main className="flex-1 flex flex-col h-full min-w-0 bg-black relative">
+        {/* Adaptive Header */}
+        <AssistantHeader
+          sidebarState={sidebarState}
+          onToggleSidebar={toggleSidebar}
+          onOpenMobileSidebar={() => setIsMobileDrawerOpen(true)}
+          activeConv={activeConv}
+          hasDraft={Boolean(activePost || activeConv?.postId)}
+          onToggleStudio={() => {
+            if (isStudioOpen) {
+              setIsStudioOpen(false);
+            } else {
+              handleOpenStudio();
+            }
+          }}
+          isStudioOpen={isStudioOpen}
+          onRenameThread={handleRenameConversation}
+          onDeleteCurrentThread={
+            activeConv ? (e) => handleDeleteConversation(e, activeConv._id) : null
+          }
         />
-      )}
-
-      {/* CONVERSATION SIDEBAR */}
-      <aside
-        className={`fixed md:relative z-50 md:z-auto inset-y-2 left-2 md:inset-0 w-72 md:w-80 bg-slate-900/90 md:bg-slate-900/70 border border-slate-800 rounded-2xl flex flex-col backdrop-blur-md overflow-hidden transition-transform duration-300 ${
-          mobileSidebarOpen ? 'translate-x-0' : '-translate-x-[110%] md:translate-x-0'
-        }`}
-      >
-        <div className="p-3.5 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2 font-bold text-slate-100 text-sm">
-            <Sparkles className="w-4 h-4 text-indigo-400" />
-            <span>Dastaan Threads</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={handleCreateNew}
-              disabled={sending}
-              className="p-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition flex items-center gap-1 text-xs font-semibold shadow-lg shadow-indigo-600/20"
-              title="New Post Assistant"
-            >
-              <Plus className="w-4 h-4" />
-              <span>New</span>
-            </button>
-            <button
-              onClick={() => setMobileSidebarOpen(false)}
-              className="md:hidden p-2 text-slate-400 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
-          {loadingConvs ? (
-            <div className="p-8 text-center text-slate-500 flex flex-col items-center gap-2">
-              <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
-              <span className="text-xs">Loading conversations...</span>
-            </div>
-          ) : conversations.length === 0 ? (
-            <div className="p-6 text-center text-slate-500 text-xs">
-              No active post conversations yet. Click "New" to start.
-            </div>
-          ) : (
-            conversations.map((conv) => {
-              const isActive = activeConv?._id === conv._id;
-              return (
-                <div
-                  key={conv._id}
-                  onClick={() => loadConversationDetails(conv._id)}
-                  className={`group relative p-3 rounded-xl cursor-pointer transition flex items-center justify-between border ${
-                    isActive
-                      ? 'bg-indigo-600/20 border-indigo-500/40 text-slate-100'
-                      : 'bg-slate-900/40 border-transparent hover:bg-slate-800/50 text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 overflow-hidden">
-                    <MessageSquare
-                      className={`w-4 h-4 shrink-0 ${isActive ? 'text-indigo-400' : 'text-slate-500'}`}
-                    />
-                    <div className="truncate text-xs font-medium">
-                      <div className="truncate">{conv.title || 'Untitled Post'}</div>
-                      <div className="text-[10px] text-slate-500 mt-0.5">
-                        {new Date(conv.updatedAt).toLocaleDateString()}
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={(e) => handleDelete(e, conv._id)}
-                    className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 rounded-lg transition"
-                    title="Delete thread"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </aside>
-
-      {/* RIGHT ASSISTANT WORKSPACE */}
-      <section className="flex-1 bg-slate-900/70 border border-slate-800 rounded-2xl flex flex-col backdrop-blur-md overflow-hidden h-full">
-        {/* Chat Top Bar */}
-        <div className="p-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setMobileSidebarOpen(true)}
-              className="md:hidden p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white"
-              title="Toggle sidebar"
-            >
-              <Menu className="w-4 h-4" />
-            </button>
-            <div>
-              <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-indigo-400" />
-                {activeConv?.title || 'Context-Aware AI Assistant'}
-              </h2>
-              <p className="text-xs text-slate-400 mt-0.5 hidden sm:block">
-                Describe your achievement or learning. Dastaan creates your post based strictly on verified context.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {activeConv && (
-              <button
-                onClick={handleOpenOrGeneratePost}
-                disabled={postLoading}
-                className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-lg shadow-indigo-600/20"
-              >
-                {postLoading ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Edit3 className="w-3.5 h-3.5" />
-                )}
-                <span>{showEditor ? 'Post Editor Active' : 'Open Post Editor'}</span>
-              </button>
-            )}
-            {activeConv && getStatusBadge(activeConv.status)}
-          </div>
-        </div>
 
         {/* Error Banner */}
         {error && (
-          <div className="px-4 py-2 bg-rose-500/20 border-b border-rose-500/30 text-rose-300 text-xs flex items-center justify-between">
-            <span>{error}</span>
-            <button onClick={() => setError(null)} className="text-rose-400 hover:text-white">✕</button>
+          <div className="px-4 py-2 bg-zinc-900 border-b border-rose-500/30 text-rose-300 text-xs flex items-center justify-between font-mono shrink-0 z-10">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
+              <span>{error}</span>
+            </div>
+            <button onClick={() => setError(null)} className="text-rose-400 hover:text-white">
+              ✕
+            </button>
           </div>
         )}
 
-        {/* Primary Scroll Container: Structured Post Editor (Top) & Conversation Thread (Bottom) */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-6">
-          {/* CANONICAL POST EDITOR EMBEDDED IN WORKSPACE */}
-          {showEditor && activePost && (
-            <div className="w-full">
-              <PostEditor
-                post={activePost}
-                onRefine={handleRefinePost}
-                onSave={handleSavePostEdits}
-                onApprove={handleApprovePost}
-                onGenerateAlternatives={handleGenerateAlternatives}
-                loading={postLoading}
-              />
-            </div>
-          )}
-
-          {/* CONVERSATION HISTORY SECTION */}
-          <div className="space-y-4 pt-2">
-            <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
-              <MessageSquare className="w-4 h-4 text-slate-400" />
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Conversation Context
-              </span>
-            </div>
-
-            {!activeConv || activeConv.messages?.length === 0 ? (
-              <div className="flex flex-col items-center justify-center text-center p-6 text-slate-400 space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-xl shadow-indigo-600/10">
-                  <Sparkles className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-200">What did you accomplish today?</h3>
-                  <p className="text-xs text-slate-400 max-w-md mt-1">
-                    Share a project milestone, learning, internship experience, or achievement.
-                  </p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-xl w-full text-left pt-2">
-                  {[
-                    'I completed my AI automation internship.',
-                    'I worked with Gemini, n8n, MongoDB, and Vercel.',
-                    'I just launched our NestJS + React authentication system.',
-                    'I learned how to optimize token usage in AI workflows.',
-                  ].map((example, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setInputMessage(example)}
-                      className="p-2.5 bg-slate-800/40 hover:bg-slate-800/80 border border-slate-700/50 rounded-xl text-xs text-slate-300 hover:text-white transition flex items-center justify-between"
-                    >
-                      <span className="truncate">{example}</span>
-                      <ArrowRight className="w-3.5 h-3.5 text-indigo-400 shrink-0 ml-2" />
-                    </button>
-                  ))}
-                </div>
+        {/* Expansive Chat Messages Scroller */}
+        <div
+          ref={chatContainerRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col justify-between relative"
+        >
+          <div className="flex-1 py-4 sm:py-6">
+            {loadingMessages ? (
+              <div className="flex flex-col items-center justify-center h-64 text-zinc-500 space-y-2">
+                <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
+                <p className="text-xs font-mono">Loading conversation context...</p>
+              </div>
+            ) : !activeConv || !activeConv.messages || activeConv.messages.length === 0 ? (
+              <div className="h-full flex items-center justify-center p-4">
+                {/* Empty state handled inside ChatComposer suggestions */}
               </div>
             ) : (
-              activeConv.messages.map((msg, idx) => {
-                const isUser = msg.role === 'user';
-                const isDraftAction = msg.action === 'GENERATE_DRAFT';
-
-                return (
-                  <div
+              <div className="space-y-1">
+                {activeConv.messages.map((msg, idx) => (
+                  <ChatMessage
                     key={idx}
-                    className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}
-                  >
-                    {!isUser && (
-                      <div className="w-8 h-8 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0 mt-1">
-                        <Bot className="w-4 h-4" />
-                      </div>
-                    )}
+                    message={msg}
+                    onOpenStudio={handleOpenStudio}
+                  />
+                ))}
 
-                    <div className={`max-w-3xl w-full sm:w-auto space-y-2 ${isUser ? 'items-end' : 'items-start'}`}>
-                      <div
-                        className={`p-3.5 sm:p-4 rounded-2xl text-xs sm:text-sm leading-relaxed ${
-                          isUser
-                            ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-tr-none shadow-lg shadow-indigo-600/20 ml-auto'
-                            : 'bg-slate-800/70 border border-slate-700/60 text-slate-200 rounded-tl-none backdrop-blur-md'
-                        }`}
-                      >
-                        <FormattedText text={msg.content} />
-                      </div>
-
-                      {/* Clean Notification Card when Post Draft is ready */}
-                      {isDraftAction && (
-                        <div className="p-3.5 bg-slate-950/80 border border-emerald-500/40 rounded-xl flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                            <span className="text-xs font-semibold text-slate-200">
-                              Canonical LinkedIn Post ready in Editor above
-                            </span>
-                          </div>
-                          <button
-                            onClick={handleOpenOrGeneratePost}
-                            className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold transition shrink-0 flex items-center gap-1"
-                          >
-                            <Edit3 className="w-3 h-3" />
-                            <span>View Editor</span>
-                          </button>
-                        </div>
-                      )}
+                {/* Assistant Generating Indicator */}
+                {sending && (
+                  <div className="max-w-3xl mx-auto py-5 px-4 sm:px-6 flex gap-4 items-center">
+                    <div className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-emerald-400 shrink-0 shadow-sm">
+                      <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
                     </div>
-
-                    {isUser && (
-                      <div className="w-8 h-8 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 shrink-0 mt-1">
-                        <User className="w-4 h-4" />
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2 text-xs text-zinc-400 font-mono">
+                      <span>Reasoning & structuring LinkedIn post...</span>
+                    </div>
                   </div>
-                );
-              })
-            )}
-
-            {sending && (
-              <div className="flex gap-3 items-center">
-                <div className="w-8 h-8 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
-                  <Bot className="w-4 h-4" />
-                </div>
-                <div className="p-3 bg-slate-800/50 border border-slate-700/50 rounded-2xl text-xs text-slate-400 flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
-                  <span>Dastaan AI is analyzing context...</span>
-                </div>
+                )}
               </div>
             )}
-
             <div ref={messagesEndRef} />
           </div>
-        </div>
 
-        {/* Fixed Input Composer at Bottom */}
-        <form onSubmit={handleSend} className="p-3 sm:p-4 border-t border-slate-800 bg-slate-950/80 shrink-0">
-          <div className="relative flex items-center">
-            <textarea
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              placeholder="Message Dastaan assistant (e.g. 'I completed my AI automation internship using Gemini and n8n')..."
-              rows={2}
-              disabled={sending}
-              className="w-full pl-4 pr-12 py-3 bg-slate-900 border border-slate-800 rounded-xl text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/60 resize-none"
-            />
+          {/* Floating Bottom Composer */}
+          <ChatComposer
+            value={inputMessage}
+            onChange={setInputMessage}
+            onSend={handleSend}
+            loading={sending}
+            isConversationEmpty={!activeConv || !activeConv.messages || activeConv.messages.length === 0}
+            onSelectSuggestion={(prompt) => {
+              setInputMessage(prompt);
+            }}
+          />
+
+          {/* Floating "Scroll to Bottom" Button */}
+          {showScrollBottom && (
             <button
-              type="submit"
-              disabled={!inputMessage.trim() || sending}
-              className="absolute right-3 p-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:hover:bg-indigo-600 text-white rounded-xl transition shadow-md shadow-indigo-600/20"
+              onClick={scrollToBottom}
+              className="fixed bottom-24 right-8 p-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-700 shadow-xl transition-all hover:scale-105 z-30"
+              aria-label="Scroll to bottom"
             >
-              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              <ArrowDown className="w-4 h-4" />
             </button>
-          </div>
-          <div className="flex items-center justify-between mt-2 text-[10px] sm:text-xs text-slate-500 px-1">
-            <span>Shift + Enter for new line</span>
-            <span>Zero-fabrication context grounding active</span>
-          </div>
-        </form>
-      </section>
+          )}
+        </div>
+      </main>
+
+      {/* 3. POST STUDIO SLIDE-OVER DRAWER */}
+      <PostStudioDrawer
+        isOpen={isStudioOpen}
+        onClose={() => setIsStudioOpen(false)}
+        post={activePost}
+        onRefine={handleRefinePost}
+        onSave={handleSavePostEdits}
+        onApprove={handleApprovePost}
+        onGenerateAlternatives={handleGenerateAlternatives}
+        loading={postLoading}
+      />
     </div>
   );
 }

@@ -12,6 +12,14 @@ export class UpdateProfileDto {
   name?: string;
 
   @ApiPropertyOptional({
+    description: 'Avatar image URL or Base64 data string',
+    example: 'data:image/jpeg;base64,...',
+  })
+  @IsOptional()
+  @IsString()
+  avatar?: string;
+
+  @ApiPropertyOptional({
     description: 'Short professional bio',
     example: 'Full-stack AI developer passionate about agentic workflows.',
   })

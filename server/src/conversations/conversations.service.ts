@@ -74,6 +74,14 @@ export class ConversationsService {
     return conversation.save();
   }
 
+  async updateConversation(userId: string, conversationId: string, updateDto: { title?: string }): Promise<ConversationDocument> {
+    const conversation = await this.getConversationById(userId, conversationId);
+    if (updateDto.title !== undefined) {
+      conversation.title = updateDto.title.trim();
+    }
+    return conversation.save();
+  }
+
   async deleteConversation(userId: string, conversationId: string): Promise<{ success: boolean }> {
     const conversation = await this.getConversationById(userId, conversationId);
     await this.conversationModel.deleteOne({ _id: conversation._id }).exec();

@@ -17,7 +17,7 @@ function parseInlineMarkdown(text) {
     if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
       const inner = part.slice(2, -2);
       return (
-        <strong key={index} className="font-bold text-slate-100">
+        <strong key={index} className="font-semibold text-zinc-100">
           {inner}
         </strong>
       );
@@ -26,7 +26,7 @@ function parseInlineMarkdown(text) {
     if (part.startsWith('*') && part.endsWith('*') && part.length > 2 && !part.startsWith('**')) {
       const inner = part.slice(1, -1);
       return (
-        <em key={index} className="italic text-slate-200">
+        <em key={index} className="italic text-zinc-300">
           {inner}
         </em>
       );
@@ -35,7 +35,7 @@ function parseInlineMarkdown(text) {
     if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
       const inner = part.slice(1, -1);
       return (
-        <code key={index} className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 text-indigo-300 font-mono text-[11px] rounded">
+        <code key={index} className="px-1.5 py-0.5 bg-zinc-900 border border-zinc-800 text-emerald-300 font-mono text-[11px] rounded">
           {inner}
         </code>
       );
@@ -70,7 +70,7 @@ export function FormattedText({ text, className = '' }) {
           const bulletContent = trimmed.replace(/^[\*\-•]\s+/, '');
           return (
             <div key={lineIdx} className="flex items-start gap-2 pl-2 my-1">
-              <span className="text-indigo-400 font-bold text-xs select-none mt-0.5">•</span>
+              <span className="text-emerald-400 font-bold text-xs select-none mt-0.5">•</span>
               <span className="flex-1">{parseInlineMarkdown(bulletContent)}</span>
             </div>
           );
@@ -82,7 +82,7 @@ export function FormattedText({ text, className = '' }) {
           if (match) {
             return (
               <div key={lineIdx} className="flex items-start gap-2 pl-2 my-1">
-                <span className="text-indigo-400 font-semibold text-xs select-none mt-0.5">{match[1]}</span>
+                <span className="text-emerald-400 font-mono font-medium text-xs select-none mt-0.5">{match[1]}</span>
                 <span className="flex-1">{parseInlineMarkdown(match[2])}</span>
               </div>
             );

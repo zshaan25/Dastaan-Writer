@@ -37,6 +37,11 @@ export const loginUser = async (data) => {
   return response.data;
 };
 
+export const resetUserPassword = async (data) => {
+  const response = await api.post('/auth/reset-password', data);
+  return response.data;
+};
+
 export const getAuthMe = async () => {
   const response = await api.get('/auth/me');
   return response.data;
@@ -71,6 +76,11 @@ export const getConversationById = async (id) => {
 
 export const deleteConversation = async (id) => {
   const response = await api.delete(`/conversations/${id}`);
+  return response.data;
+};
+
+export const updateConversation = async (id, data) => {
+  const response = await api.put(`/conversations/${id}`, data);
   return response.data;
 };
 

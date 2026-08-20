@@ -1,71 +1,84 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Feather, Sparkles, LogOut, User as UserIcon, LogIn, UserPlus, Bot } from 'lucide-react';
+import { Sparkles, LogOut, User as UserIcon, LogIn } from 'lucide-react';
+
+import { DastaanLogo } from './DastaanLogo';
 
 export const Header = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const location = useLocation();
 
   return (
-    <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        <Link to="/" className="flex items-center space-x-3 group">
-          <div className="bg-indigo-600/20 p-2 rounded-xl border border-indigo-500/30 text-indigo-400 group-hover:border-indigo-400/50 transition">
-            <Feather className="w-6 h-6" />
-          </div>
-          <div>
-            <span className="text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
-              Dastaan <Sparkles className="w-4 h-4 text-pink-400" />
+    <header className="border-b border-zinc-800/80 bg-black/90 backdrop-blur-md sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+        <Link to="/" className="flex items-center space-x-2.5 group">
+          <DastaanLogo size={30} className="rounded-lg shadow-sm group-hover:scale-105 transition-transform" />
+          <div className="flex items-baseline space-x-2">
+            <span className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
+              Dastaan
             </span>
-            <span className="text-xs text-slate-400 block -mt-1 font-mono">LinkedIn Content Assistant</span>
+            <span className="text-[11px] text-zinc-500 hidden sm:inline-block font-mono tracking-tighter">
+              Storytelling Platform
+            </span>
           </div>
         </Link>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 sm:space-x-3">
           {isAuthenticated ? (
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
               <Link
                 to="/assistant"
-                className={`flex items-center gap-1.5 text-xs px-3.5 py-1.5 rounded-xl border transition font-medium ${
+                className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all font-medium ${
                   location.pathname === '/assistant'
-                    ? 'bg-indigo-600 border-indigo-500 text-white shadow-md shadow-indigo-600/20'
-                    : 'bg-slate-800/80 hover:bg-slate-700 text-slate-200 border-slate-700'
+                    ? 'bg-zinc-900 border-zinc-700 text-white'
+                    : 'text-zinc-400 hover:text-zinc-200 border-transparent hover:border-zinc-800 hover:bg-zinc-900/50'
                 }`}
               >
-                <Bot className="w-3.5 h-3.5 text-indigo-400" /> AI Assistant
+                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Assistant</span>
               </Link>
               <Link
-                to="/"
-                className={`flex items-center gap-1.5 text-xs px-3.5 py-1.5 rounded-xl border transition font-medium ${
-                  location.pathname === '/'
-                    ? 'bg-indigo-600 border-indigo-500 text-white shadow-md shadow-indigo-600/20'
-                    : 'bg-slate-800/80 hover:bg-slate-700 text-slate-200 border-slate-700'
+                to="/profile"
+                className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all font-medium ${
+                  location.pathname === '/profile'
+                    ? 'bg-zinc-900 border-zinc-700 text-white'
+                    : 'text-zinc-400 hover:text-zinc-200 border-transparent hover:border-zinc-800 hover:bg-zinc-900/50'
                 }`}
               >
-                <UserIcon className="w-3.5 h-3.5 text-indigo-400" /> Profile Context
+                {user?.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user.name}
+                    className="w-3.5 h-3.5 rounded-full object-cover shrink-0"
+                  />
+                ) : (
+                  <UserIcon className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                )}
+                <span>Profile</span>
               </Link>
               <button
                 onClick={logout}
                 title="Logout"
-                className="flex items-center gap-1.5 text-xs bg-red-950/40 hover:bg-red-900/40 text-red-300 px-3 py-1.5 rounded-xl border border-red-800/50 transition"
+                className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 px-2.5 py-1.5 rounded-lg transition border border-transparent hover:border-zinc-800"
               >
-                <LogOut className="w-3.5 h-3.5" /> Logout
+                <LogOut className="w-3.5 h-3.5" />
               </button>
             </div>
           ) : (
             <div className="flex items-center space-x-2">
               <Link
                 to="/login"
-                className="flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-2 rounded-xl border border-slate-700 transition font-medium"
+                className="flex items-center gap-1.5 text-xs text-zinc-300 hover:text-white px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-zinc-950 transition font-medium"
               >
-                <LogIn className="w-3.5 h-3.5" /> Sign In
+                <LogIn className="w-3.5 h-3.5 text-zinc-400" />
+                <span>Sign In</span>
               </Link>
               <Link
                 to="/register"
-                className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-xl transition font-medium shadow-md shadow-indigo-600/20"
+                className="flex items-center gap-1.5 text-xs bg-emerald-400 hover:bg-emerald-300 text-black px-3.5 py-1.5 rounded-lg transition font-semibold"
               >
-                <UserPlus className="w-3.5 h-3.5" /> Register
+                <span>Get Started</span>
               </Link>
             </div>
           )}

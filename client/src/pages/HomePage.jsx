@@ -1,268 +1,206 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { useHealthCheck } from '../hooks/useHealthCheck';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, XCircle, RefreshCw, Server, Sparkles, User, Briefcase, Award, Edit3, Save, ShieldCheck, KeyRound } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import {
+  Bot,
+  ArrowRight,
+  Sparkles,
+  Zap,
+  Target,
+  PenTool,
+  CheckCircle2,
+  Layers,
+  ShieldCheck,
+  User,
+  FileText,
+  TrendingUp,
+} from 'lucide-react';
 
-export const HomePage = () => {
-  const { user, isAuthenticated, token, updateProfile } = useAuth();
-  const { health, loading: healthLoading, error: healthError, refetch } = useHealthCheck();
-
-  // Profile Editor state
-  const [editing, setEditing] = useState(false);
-  const [bio, setBio] = useState('');
-  const [profession, setProfession] = useState('');
-  const [skills, setSkills] = useState('');
-  const [writingStyle, setWritingStyle] = useState('');
-  const [preferredTone, setPreferredTone] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-
-  useEffect(() => {
-    if (user) {
-      setBio(user.bio || '');
-      setProfession(user.profession || '');
-      setSkills(Array.isArray(user.skills) ? user.skills.join(', ') : '');
-      setWritingStyle(user.writingStyle || '');
-      setPreferredTone(user.preferredTone || '');
-    }
-  }, [user]);
-
-  const handleSaveProfile = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    setSaveSuccess(false);
-    try {
-      const skillsArray = skills.split(',').map((s) => s.trim()).filter(Boolean);
-      await updateProfile({
-        bio,
-        profession,
-        skills: skillsArray,
-        writingStyle,
-        preferredTone,
-      });
-      setSaveSuccess(true);
-      setEditing(false);
-    } catch (err) {
-      console.error('Failed to update profile:', err);
-    } finally {
-      setSaving(false);
-    }
-  };
+export function HomePage() {
+  const { user, isAuthenticated } = useAuth();
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
-      {/* Hero Header */}
-      <div className="text-center space-y-3 py-4">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-medium">
-          <Sparkles className="w-3.5 h-3.5" /> Dastaan Phase 2 - Database & Authentication
+    <div className="space-y-16 max-w-5xl mx-auto py-8 px-4">
+      {/* 1. HERO SECTION */}
+      <div className="text-center space-y-5 max-w-3xl mx-auto pt-6">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs font-mono">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span>Dastaan — Storytelling Platform</span>
         </div>
-        <h1 className="text-4xl font-extrabold tracking-tight">
-          AI Professional Context <span className="gradient-text">& Authenticated Profiles</span>
+
+        <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white leading-[1.1]">
+          Turn your experience into <br />
+          <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500 bg-clip-text text-transparent">
+            compelling stories.
+          </span>
         </h1>
-        <p className="text-slate-400 text-sm max-w-xl mx-auto">
-          Secure MongoDB persistence, bcrypt password hashing, and JWT authorization protecting user contexts.
+
+        <p className="text-zinc-400 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
+          Dastaan learns your verified background, achievements, and unique voice to craft high-impact LinkedIn content with zero generic fluff.
         </p>
-      </div>
 
-      {/* Authenticated User Profile View & Editor */}
-      {isAuthenticated ? (
-        <div className="glass-card rounded-2xl p-6 sm:p-8 space-y-6 shadow-2xl border border-indigo-500/30">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-            <div className="flex items-center space-x-3">
-              <div className="p-3 bg-indigo-600/20 rounded-xl text-indigo-400 border border-indigo-500/30">
-                <User className="w-6 h-6" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-white">{user?.name}</h2>
-                <p className="text-xs text-slate-400 font-mono">{user?.email}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setEditing(!editing)}
-              className="flex items-center gap-1.5 text-xs bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-3.5 py-2 rounded-xl transition font-medium"
-            >
-              <Edit3 className="w-3.5 h-3.5" /> {editing ? 'Cancel Edit' : 'Edit Context Profile'}
-            </button>
-          </div>
+        {/* Hero CTAs */}
+        <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
+          <Link
+            to="/assistant"
+            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-black font-semibold text-xs sm:text-sm transition shadow-lg shadow-emerald-500/10"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Launch Assistant Studio</span>
+            <ArrowRight className="w-4 h-4" />
+          </Link>
 
-          {saveSuccess && (
-            <div className="flex items-center gap-2 p-3 bg-emerald-950/50 border border-emerald-800/60 rounded-xl text-emerald-300 text-xs">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>Profile context updated via PUT /api/users/me!</span>
-            </div>
-          )}
-
-          {editing ? (
-            <form onSubmit={handleSaveProfile} className="space-y-4 pt-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Profession / Role</label>
-                  <input
-                    type="text"
-                    value={profession}
-                    onChange={(e) => setProfession(e.target.value)}
-                    placeholder="Senior Full Stack Engineer"
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Skills (comma-separated)</label>
-                  <input
-                    type="text"
-                    value={skills}
-                    onChange={(e) => setSkills(e.target.value)}
-                    placeholder="React, NestJS, TypeScript, MongoDB"
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Professional Bio</label>
-                <textarea
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  rows={2}
-                  placeholder="Building high impact AI tools and scalable full stack web applications..."
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Writing Style</label>
-                  <input
-                    type="text"
-                    value={writingStyle}
-                    onChange={(e) => setWritingStyle(e.target.value)}
-                    placeholder="Concise, Story-driven, Analytical"
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Preferred Tone</label>
-                  <input
-                    type="text"
-                    value={preferredTone}
-                    onChange={(e) => setPreferredTone(e.target.value)}
-                    placeholder="Professional yet approachable"
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-4 py-2 rounded-xl font-medium transition shadow-md shadow-emerald-600/20 disabled:opacity-50"
-                >
-                  <Save className="w-3.5 h-3.5" /> {saving ? 'Saving...' : 'Save Profile Context'}
-                </button>
-              </div>
-            </form>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 text-xs">
-              <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-800 space-y-1">
-                <div className="text-slate-400 font-medium flex items-center gap-1.5"><Briefcase className="w-3.5 h-3.5 text-indigo-400" /> Profession</div>
-                <div className="text-slate-200 font-semibold">{user?.profession || 'Not set yet'}</div>
-              </div>
-
-              <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-800 space-y-1">
-                <div className="text-slate-400 font-medium flex items-center gap-1.5"><Award className="w-3.5 h-3.5 text-purple-400" /> Skills</div>
-                <div className="text-slate-200 font-semibold">
-                  {user?.skills?.length ? user.skills.join(', ') : 'Not set yet'}
-                </div>
-              </div>
-
-              <div className="sm:col-span-2 bg-slate-900/80 p-4 rounded-xl border border-slate-800 space-y-1">
-                <div className="text-slate-400 font-medium flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Professional Context Bio</div>
-                <p className="text-slate-300 leading-relaxed">{user?.bio || 'No bio specified yet. Click "Edit Context Profile" above.'}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Active JWT Debug Badge */}
-          <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-[11px] font-mono text-slate-400 flex items-center justify-between">
-            <div className="flex items-center space-x-2 overflow-hidden">
-              <KeyRound className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span className="truncate">JWT Bearer: {token?.substring(0, 30)}...</span>
-            </div>
-            <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded border border-emerald-500/30">Authenticated</span>
-          </div>
-        </div>
-      ) : (
-        /* Guest Callout */
-        <div className="glass-card rounded-2xl p-8 text-center space-y-4 border border-slate-800 shadow-xl">
-          <div className="p-3 bg-purple-600/10 text-purple-400 rounded-2xl w-fit mx-auto border border-purple-500/20">
-            <KeyRound className="w-8 h-8" />
-          </div>
-          <h2 className="text-2xl font-bold text-white">Authentication Required</h2>
-          <p className="text-slate-400 text-sm max-w-md mx-auto">
-            Register a new account or sign in to test MongoDB persistence, bcrypt password hashing, and protected profile API endpoints.
-          </p>
-          <div className="flex justify-center gap-3 pt-2">
+          {isAuthenticated ? (
             <Link
-              to="/login"
-              className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-5 py-2.5 rounded-xl font-medium text-xs border border-slate-700 transition"
+              to="/profile"
+              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-200 hover:text-white border border-zinc-800 hover:border-zinc-700 text-xs sm:text-sm font-medium transition"
             >
-              Sign In
+              <User className="w-4 h-4 text-emerald-400" />
+              <span>Manage Profile & Voice Context</span>
             </Link>
+          ) : (
             <Link
               to="/register"
-              className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl font-medium text-xs transition shadow-lg shadow-indigo-600/20"
+              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-200 hover:text-white border border-zinc-800 hover:border-zinc-700 text-xs sm:text-sm font-medium transition"
             >
-              Register New Account
+              <span>Create Free Account</span>
+            </Link>
+          )}
+        </div>
+      </div>
+
+      {/* 2. AUTHENTICATED QUICK LAUNCH BANNER */}
+      {isAuthenticated && (
+        <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xl">
+          <div className="flex items-center gap-4">
+            {user?.avatar ? (
+              <img
+                src={user.avatar}
+                alt={user.name}
+                className="w-12 h-12 rounded-xl object-cover border border-zinc-700 shrink-0"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-emerald-400 shrink-0 font-mono font-bold">
+                {user?.name ? user.name.charAt(0).toUpperCase() : <User className="w-5 h-5" />}
+              </div>
+            )}
+            <div className="space-y-0.5">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <span>Welcome back, {user?.name || 'Storyteller'}</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              </h3>
+              <p className="text-xs text-zinc-400">
+                {user?.profession ? `Grounded in: ${user.profession}` : 'Personalize your AI voice in your profile'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <Link
+              to="/profile"
+              className="flex-1 sm:flex-none text-center px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-medium text-zinc-300 hover:text-white transition"
+            >
+              Edit Profile
+            </Link>
+            <Link
+              to="/assistant"
+              className="flex-1 sm:flex-none text-center px-4 py-2 rounded-lg bg-emerald-400 hover:bg-emerald-300 text-black text-xs font-semibold transition flex items-center justify-center gap-1.5"
+            >
+              <span>New Post</span>
+              <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
         </div>
       )}
 
-      {/* Backend API Health Status */}
-      <div className="glass-card rounded-2xl p-6 space-y-4 shadow-xl border border-slate-800">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-slate-800 rounded-xl text-slate-300 border border-slate-700">
-              <Server className="w-4 h-4" />
+      {/* 3. INTERACTIVE PRODUCT SHOWCASE MOCKUP */}
+      <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 sm:p-8 space-y-6 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-emerald-400">
+              <FileText className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-white">System API & Database Health</h3>
-              <p className="text-xs text-slate-400">GET /api/health</p>
+              <h3 className="text-xs sm:text-sm font-bold text-white">How Dastaan Works</h3>
+              <p className="text-[11px] text-zinc-500 font-mono">From conversation to viral LinkedIn post</p>
             </div>
           </div>
-          <button
-            onClick={refetch}
-            disabled={healthLoading}
-            className="flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${healthLoading ? 'animate-spin' : ''}`} />
-            Check API
-          </button>
+
+          <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono">
+            3-Step Workflow
+          </span>
         </div>
 
-        <div>
-          {healthLoading ? (
-            <div className="flex items-center space-x-2 text-slate-400 text-xs py-2">
-              <RefreshCw className="w-4 h-4 animate-spin text-indigo-400" />
-              <span>Verifying backend connectivity...</span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Step 1 */}
+          <div className="p-5 rounded-xl bg-zinc-900/40 border border-zinc-800/80 space-y-3">
+            <div className="w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-emerald-400 font-mono text-xs font-bold">
+              1
             </div>
-          ) : healthError ? (
-            <div className="flex items-center space-x-2 text-red-400 text-xs py-2">
-              <XCircle className="w-4 h-4 text-red-400" />
-              <span>API Offline ({healthError})</span>
+            <h4 className="text-xs font-semibold text-white">Chat Naturally</h4>
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              Tell the assistant what you shipped, learned, or solved. It extracts key metrics and narrative hooks.
+            </p>
+          </div>
+
+          {/* Step 2 */}
+          <div className="p-5 rounded-xl bg-zinc-900/40 border border-zinc-800/80 space-y-3">
+            <div className="w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-emerald-400 font-mono text-xs font-bold">
+              2
             </div>
-          ) : (
-            <div className="flex items-center justify-between bg-slate-900/90 px-4 py-2.5 rounded-xl border border-emerald-500/30 text-xs">
-              <div className="flex items-center space-x-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span className="font-semibold text-emerald-300">API Status: OK</span>
-              </div>
-              <span className="text-slate-400 font-mono">Service: {health?.service}</span>
+            <h4 className="text-xs font-semibold text-white">Grounded Post Draft</h4>
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              AI automatically structures a compelling hook, multi-paragraph body, and closing question in your tone.
+            </p>
+          </div>
+
+          {/* Step 3 */}
+          <div className="p-5 rounded-xl bg-zinc-900/40 border border-zinc-800/80 space-y-3">
+            <div className="w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-emerald-400 font-mono text-xs font-bold">
+              3
             </div>
-          )}
+            <h4 className="text-xs font-semibold text-white">Post Studio & Polish</h4>
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              Refine with 1-click AI transformations, preview live LinkedIn formatting, and approve or email directly.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. KEY CAPABILITIES GRID */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="p-6 rounded-2xl bg-zinc-950 border border-zinc-800 space-y-2.5">
+          <div className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-emerald-400">
+            <Target className="w-4 h-4" />
+          </div>
+          <h3 className="text-sm font-semibold text-white">Zero Hallucination</h3>
+          <p className="text-xs text-zinc-400 leading-relaxed">
+            Posts are strictly generated from your actual projects, skills, and background context.
+          </p>
+        </div>
+
+        <div className="p-6 rounded-2xl bg-zinc-950 border border-zinc-800 space-y-2.5">
+          <div className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-emerald-400">
+            <PenTool className="w-4 h-4" />
+          </div>
+          <h3 className="text-sm font-semibold text-white">Adaptive Tone Tuning</h3>
+          <p className="text-xs text-zinc-400 leading-relaxed">
+            Switch between technical deep dives, story-driven lessons, and concise executive announcements.
+          </p>
+        </div>
+
+        <div className="p-6 rounded-2xl bg-zinc-950 border border-zinc-800 space-y-2.5">
+          <div className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-emerald-400">
+            <Layers className="w-4 h-4" />
+          </div>
+          <h3 className="text-sm font-semibold text-white">Studio Workspace</h3>
+          <p className="text-xs text-zinc-400 leading-relaxed">
+            Generates 3 variations, custom hashtags, and email drafts via Resend integration.
+          </p>
         </div>
       </div>
     </div>
   );
-};
+}
+
+export default HomePage;

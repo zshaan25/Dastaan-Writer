@@ -8,9 +8,9 @@ export const MainLayout = ({ children }) => {
 
   if (isAssistantPage) {
     return (
-      <div className="h-screen w-screen flex flex-col bg-slate-950 text-slate-100 overflow-hidden font-sans">
+      <div className="h-screen w-screen flex flex-col bg-black text-zinc-100 overflow-hidden font-sans antialiased">
         <Header />
-        <main className="flex-1 w-full h-[calc(100vh-4rem)] overflow-hidden flex flex-col">
+        <main className="flex-1 w-full h-[calc(100vh-3.5rem)] overflow-hidden flex flex-col bg-black">
           {children}
         </main>
       </div>
@@ -18,13 +18,13 @@ export const MainLayout = ({ children }) => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 font-sans">
+    <div className="min-h-screen flex flex-col bg-black text-zinc-100 font-sans antialiased">
       <Header />
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {children}
       </main>
-      <footer className="border-t border-slate-800/80 py-6 text-center text-xs text-slate-500">
-        <p>Dastaan AI © 2026 - AI-Powered Social Media Content & Publishing Assistant</p>
+      <footer className="border-t border-zinc-800/60 py-6 text-center text-xs text-zinc-500 font-mono tracking-tight">
+        <p>Dastaan Studio © 2026 • AI Social Media Content & Publishing Engine</p>
       </footer>
     </div>
   );

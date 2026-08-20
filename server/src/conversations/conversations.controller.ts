@@ -1,8 +1,9 @@
-import { Controller, Post, Get, Delete, Param, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Get, Put, Delete, Param, Body, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ConversationsService } from './conversations.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
+import { UpdateConversationDto } from './dto/update-conversation.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 
 @ApiTags('Conversations')
@@ -67,6 +68,24 @@ export class ConversationsController {
   async findOne(@Request() req: any, @Param('id') id: string) {
     const userId = req.user.id || req.user._id || req.user.userId;
     return this.conversationsService.getConversationById(userId, id);
+  }
+
+  @Put(':id')
+  @ApiOperation({
+    summary: 'Update conversation thread',
+    description: 'Updates conversation title or metadata.',
+  })
+  @ApiParam({ name: 'id', description: 'MongoDB ObjectId of the conversation' })
+  @ApiResponse({ status: 200, description: 'Conversation updated successfully.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized access.' })
+  @ApiResponse({ status: 404, description: 'Conversation not found.' })
+  async update(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body() updateDto: UpdateConversationDto,
+  ) {
+    const userId = req.user.id || req.user._id || req.user.userId;
+    return this.conversationsService.updateConversation(userId, id, updateDto);
   }
 
   @Delete(':id')

@@ -22,9 +22,13 @@ import {
   Plus,
   Sliders,
   Send,
+  Eye,
+  Clock,
+  ExternalLink,
 } from 'lucide-react';
 import { FormattedText } from '../utils/textFormatter';
 import { sendPostEmail } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export function PostEditor({
   post,
@@ -33,9 +37,11 @@ export function PostEditor({
   onApprove,
   onGenerateAlternatives,
   loading,
+  isFullRowMode = true,
 }) {
   if (!post) return null;
 
+  const { user } = useAuth();
   const [hook, setHook] = useState(post.hook || '');
   const [body, setBody] = useState(post.body || '');
   const [cta, setCta] = useState(post.cta || '');
@@ -98,26 +104,15 @@ export function PostEditor({
     setMentions(mentions.filter((m) => m !== mentionToRemove));
   };
 
-  const handleSaveManualEdits = async () => {
-    if (!onSave) return;
-    await onSave({
-      hook,
-      body,
-      cta,
-      hashtags,
-      mentions,
-      postType,
-      tone,
-    });
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 2500);
+  const handleAction = (action, value = null) => {
+    if (onRefine) {
+      onRefine(action, value);
+    }
   };
 
-  const handleApprove = async () => {
-    if (onApprove) {
-      await onApprove(post._id);
-    } else if (onSave) {
-      await onSave({
+  const handleSaveManualEdits = () => {
+    if (onSave) {
+      onSave({
         hook,
         body,
         cta,
@@ -125,26 +120,17 @@ export function PostEditor({
         mentions,
         postType,
         tone,
-        status: 'APPROVED',
       });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
     }
-    setApproveSuccess(true);
   };
 
-  const handleAction = async (action, newTone) => {
-    if (!onRefine) return;
-    await onRefine({
-      refinementAction: action,
-      newTone: newTone || tone,
-      workingVersion: {
-        hook,
-        body,
-        cta,
-        hashtags,
-        mentions,
-      },
-    });
-    setActiveVersionId('working');
+  const handleApprove = () => {
+    if (onApprove) {
+      onApprove();
+      setApproveSuccess(true);
+    }
   };
 
   const handleSelectVersion = (version) => {
@@ -155,7 +141,6 @@ export function PostEditor({
       setCta(post.cta || '');
       setHashtags(post.hashtags || []);
       setMentions(post.mentions || []);
-      setTone(post.tone || 'PROFESSIONAL');
       return;
     }
 
@@ -163,117 +148,143 @@ export function PostEditor({
     setHook(version.hook || '');
     setBody(version.body || '');
     setCta(version.cta || '');
-    setHashtags(version.hashtags || []);
-    setMentions(version.mentions || []);
-    if (version.tone) setTone(version.tone);
+    if (version.hashtags) setHashtags(version.hashtags);
+    if (version.mentions) setMentions(version.mentions);
   };
 
-  const fullPostText = `${hook}\n\n${body}${cta ? `\n\n${cta}` : ''}\n\n${hashtags.join(' ')}${
-    mentions.length > 0 ? `\n${mentions.join(' ')}` : ''
-  }`.trim();
-
   const copyFullPost = () => {
-    navigator.clipboard.writeText(fullPostText);
+    const parts = [];
+    if (hook.trim()) parts.push(hook.trim());
+    if (body.trim()) parts.push(body.trim());
+    if (cta.trim()) parts.push(cta.trim());
+    if (hashtags.length > 0) parts.push(hashtags.join(' '));
+    if (mentions.length > 0) parts.push(mentions.join(' '));
+
+    const fullText = parts.join('\n\n');
+    navigator.clipboard.writeText(fullText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleEmailPost = async () => {
-    if (!post?._id || emailing) return;
+    if (!post?._id) return;
     try {
       setEmailing(true);
       setEmailError(null);
-      setEmailSuccess(false);
       await sendPostEmail(post._id);
       setEmailSuccess(true);
-      setTimeout(() => setEmailSuccess(false), 3500);
+      setTimeout(() => setEmailSuccess(false), 4000);
     } catch (err) {
-      const errorMsg = err.response?.data?.message || 'Failed to send email';
-      setEmailError(errorMsg);
-      setTimeout(() => setEmailError(null), 4000);
+      console.error('Failed to email post:', err);
+      setEmailError(err.response?.data?.message || err.message || 'Failed to send email');
     } finally {
       setEmailing(false);
     }
   };
 
   const wordCount = body.trim() ? body.trim().split(/\s+/).length : 0;
-  const charCount = fullPostText.length;
+  const totalWords = (hook + ' ' + body + ' ' + cta).trim().split(/\s+/).filter(Boolean).length;
+  const readTimeSeconds = Math.max(1, Math.round((totalWords / 200) * 60));
 
   return (
-    <div className="w-full bg-zinc-950 border border-zinc-800 rounded-xl flex flex-col overflow-hidden">
-      {/* 1. TOP HEADER & METADATA BAR */}
-      <div className="p-4 border-b border-zinc-800 bg-zinc-950 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-300">
-            <FileText className="w-4 h-4 text-emerald-400" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-white">Post Studio</h3>
-              <span
-                className={`px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider rounded border ${
-                  post.status === 'APPROVED'
-                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-semibold'
-                    : 'bg-zinc-900 text-zinc-400 border-zinc-800'
-                }`}
-              >
-                {post.status || 'DRAFT'}
-              </span>
-            </div>
-          </div>
+    <div className="flex flex-col h-full bg-zinc-950 text-zinc-100 select-text overflow-hidden">
+      {/* 1. TOP TOOLBAR: REFINEMENT PILLS & TONE SWITCHER */}
+      <div className="px-4 sm:px-6 py-2.5 bg-zinc-950 border-b border-zinc-800/80 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        {/* Left: Quick AI Actions Toolbar */}
+        <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 max-w-full">
+          <span className="text-[11px] font-mono uppercase text-zinc-500 flex items-center gap-1 shrink-0 mr-1">
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> Transform:
+          </span>
+
+          {[
+            { label: 'Improve Hook', action: 'IMPROVE_HOOK', icon: Sparkles },
+            { label: 'Shorter', action: 'MAKE_SHORTER', icon: Scissors },
+            { label: 'Personal', action: 'MAKE_MORE_PERSONAL', icon: UserCheck },
+            { label: 'Technical', action: 'MAKE_MORE_TECHNICAL', icon: Code },
+            { label: 'Professional', action: 'MAKE_MORE_PROFESSIONAL', icon: Zap },
+            { label: 'Improve Flow', action: 'IMPROVE_FLOW', icon: Layers },
+            { label: 'Simplify', action: 'SIMPLIFY', icon: RotateCcw },
+          ].map(({ label, action, icon: Icon }) => (
+            <button
+              key={action}
+              type="button"
+              onClick={() => handleAction(action)}
+              disabled={loading}
+              className="text-xs text-zinc-300 hover:text-emerald-400 hover:bg-zinc-900 bg-zinc-900/60 border border-zinc-800 px-2.5 py-1 rounded-lg transition disabled:opacity-40 flex items-center gap-1 shrink-0 font-medium"
+            >
+              <Icon className="w-3 h-3 text-zinc-400" />
+              <span>{label}</span>
+            </button>
+          ))}
+
+          {cta ? (
+            <button
+              type="button"
+              onClick={() => handleAction('REMOVE_CTA')}
+              disabled={loading}
+              className="text-xs text-zinc-400 hover:text-rose-400 hover:bg-zinc-900 bg-zinc-900/60 border border-zinc-800 px-2.5 py-1 rounded-lg transition disabled:opacity-40 flex items-center gap-1 shrink-0"
+            >
+              <X className="w-3 h-3 text-zinc-500" />
+              <span>Remove CTA</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => handleAction('ADD_CTA')}
+              disabled={loading}
+              className="text-xs text-zinc-300 hover:text-emerald-400 hover:bg-zinc-900 bg-zinc-900/60 border border-zinc-800 px-2.5 py-1 rounded-lg transition disabled:opacity-40 flex items-center gap-1 shrink-0"
+            >
+              <PlusCircle className="w-3 h-3 text-emerald-400" />
+              <span>Add CTA</span>
+            </button>
+          )}
+
+          {onGenerateAlternatives && (
+            <button
+              type="button"
+              onClick={onGenerateAlternatives}
+              disabled={loading}
+              className="text-xs text-emerald-300 hover:text-emerald-200 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1 rounded-lg border border-emerald-500/30 transition disabled:opacity-40 flex items-center gap-1 shrink-0 font-semibold"
+            >
+              <Layers className="w-3.5 h-3.5 text-emerald-400" />
+              <span>3 Versions</span>
+            </button>
+          )}
         </div>
 
-        {/* Type & Tone Controls */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-zinc-900/80 border border-zinc-800 rounded-lg px-2 py-1">
-            <span className="text-[10px] uppercase font-mono text-zinc-500">Type</span>
-            <select
-              value={postType}
-              onChange={(e) => setPostType(e.target.value)}
-              className="bg-transparent text-xs text-zinc-200 focus:outline-none cursor-pointer"
-            >
-              <option value="ACHIEVEMENT" className="bg-zinc-900">Achievement</option>
-              <option value="PROJECT" className="bg-zinc-900">Project</option>
-              <option value="LEARNING" className="bg-zinc-900">Learning</option>
-              <option value="CAREER_UPDATE" className="bg-zinc-900">Career Update</option>
-              <option value="ANNOUNCEMENT" className="bg-zinc-900">Announcement</option>
-              <option value="THOUGHT_LEADERSHIP" className="bg-zinc-900">Thought Leadership</option>
-            </select>
-          </div>
-
-          <div className="flex items-center gap-1.5 bg-zinc-900/80 border border-zinc-800 rounded-lg px-2 py-1">
-            <span className="text-[10px] uppercase font-mono text-zinc-500">Tone</span>
-            <select
-              value={tone}
-              onChange={(e) => {
-                const newT = e.target.value;
-                setTone(newT);
-                handleAction('CHANGE_TONE', newT);
-              }}
-              className="bg-transparent text-xs text-zinc-200 focus:outline-none cursor-pointer"
-            >
-              <option value="PROFESSIONAL" className="bg-zinc-900">Professional</option>
-              <option value="PERSONAL" className="bg-zinc-900">Personal</option>
-              <option value="TECHNICAL" className="bg-zinc-900">Technical</option>
-              <option value="STORYTELLING" className="bg-zinc-900">Storytelling</option>
-              <option value="CONFIDENT" className="bg-zinc-900">Confident</option>
-              <option value="MINIMAL" className="bg-zinc-900">Minimal</option>
-            </select>
-          </div>
+        {/* Right: Target Tone Selector */}
+        <div className="flex items-center gap-2 shrink-0">
+          <label className="text-xs text-zinc-400 font-mono">Tone:</label>
+          <select
+            value={tone}
+            onChange={(e) => {
+              const newT = e.target.value;
+              setTone(newT);
+              handleAction('CHANGE_TONE', newT);
+            }}
+            className="bg-zinc-900 border border-zinc-800 text-xs text-zinc-200 rounded-lg px-2.5 py-1 focus:outline-none focus:border-emerald-400 cursor-pointer"
+          >
+            <option value="PROFESSIONAL">Professional</option>
+            <option value="STORYTELLING">Storytelling</option>
+            <option value="TECHNICAL">Technical</option>
+            <option value="PERSONAL">Personal</option>
+            <option value="CONFIDENT">Confident</option>
+            <option value="MINIMAL">Minimal</option>
+          </select>
         </div>
       </div>
 
-      {/* 2. ALTERNATIVE VERSIONS SWITCHER BAR */}
+      {/* 2. ALTERNATIVE VERSIONS TABS (IF MULTIPLE VERSIONS EXIST) */}
       {Array.isArray(post.versions) && post.versions.length > 0 && (
-        <div className="px-4 py-2 bg-zinc-900/50 border-b border-zinc-800 flex items-center gap-2 overflow-x-auto">
+        <div className="px-6 py-2 bg-zinc-900/40 border-b border-zinc-800 flex items-center gap-2 overflow-x-auto shrink-0">
           <span className="text-[11px] font-mono text-zinc-500 flex items-center gap-1 shrink-0">
             <Layers className="w-3.5 h-3.5 text-zinc-400" /> Variations:
           </span>
           <button
             onClick={() => handleSelectVersion('working')}
-            className={`px-2.5 py-1 text-xs rounded transition whitespace-nowrap ${
+            className={`px-3 py-1 text-xs rounded-lg transition whitespace-nowrap font-medium ${
               activeVersionId === 'working'
-                ? 'bg-zinc-800 text-emerald-400 border border-zinc-700 font-medium'
+                ? 'bg-zinc-800 text-emerald-400 border border-zinc-700 shadow-sm'
                 : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'
             }`}
           >
@@ -283,142 +294,102 @@ export function PostEditor({
             <button
               key={ver.id || idx}
               onClick={() => handleSelectVersion(ver)}
-              className={`px-2.5 py-1 text-xs rounded transition whitespace-nowrap ${
+              className={`px-3 py-1 text-xs rounded-lg transition whitespace-nowrap font-medium ${
                 activeVersionId === ver.id
-                  ? 'bg-zinc-800 text-emerald-400 border border-zinc-700 font-medium'
+                  ? 'bg-zinc-800 text-emerald-400 border border-zinc-700 shadow-sm'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'
               }`}
             >
-              {ver.label || `Version ${idx + 1}`}
+              {ver.label || `Variation ${idx + 1}`}
             </button>
           ))}
         </div>
       )}
 
-      {/* 3. MAIN WORKSPACE: 2-COLUMN SPLIT */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 sm:p-6 items-start">
-        {/* LEFT COLUMN: STRUCTURED SEAMLESS FORM CONTROLS (7 COLS) */}
-        <div className="lg:col-span-7 flex flex-col space-y-6">
-          {/* HOOK FIELD (SEAMLESS WITH GLOWING BOTTOM BORDER) */}
-          <div className="space-y-1">
+      {/* 3. FULL-ROW SIDE-BY-SIDE WORKSPACE (50% EDITOR / 50% LIVE PREVIEW) */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* LEFT COLUMN: STRUCTURED POST EDITOR (INDEPENDENT SCROLL) */}
+        <div className="w-full lg:w-1/2 h-full overflow-y-auto p-5 sm:p-8 space-y-6 border-b lg:border-b-0 lg:border-r border-zinc-800/80 bg-zinc-950">
+          {/* HOOK INPUT */}
+          <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-mono uppercase text-zinc-400 flex items-center gap-1.5">
+              <label className="text-xs font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                 <span>Hook (Opening Line)</span>
               </label>
-              <span className="text-[10px] text-zinc-500 font-mono">{hook.length} chars</span>
+              <span className="text-[10px] text-zinc-500 font-mono">{hook.length} characters</span>
             </div>
             <input
               type="text"
               value={hook}
               onChange={(e) => setHook(e.target.value)}
-              placeholder="Write a clear, compelling opening statement..."
-              className="w-full pb-2 pt-1 bg-transparent border-b border-zinc-800 text-sm font-medium text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-emerald-400 transition-colors"
+              placeholder="Write a clear, high-impact opening line..."
+              className="w-full p-3 bg-zinc-900/60 border border-zinc-800 rounded-xl text-sm font-semibold text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-emerald-400 transition"
             />
           </div>
 
-          {/* BODY FIELD (SEAMLESS WITH GLOWING LEFT ACCENT BORDER) */}
-          <div className="space-y-1.5">
+          {/* MULTI-PARAGRAPH BODY TEXTAREA (EXPANSIVE FULL HEIGHT) */}
+          <div className="space-y-1.5 flex flex-col">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-mono uppercase text-zinc-400 flex items-center gap-1.5">
-                <span>Post Body</span>
+              <label className="text-xs font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-zinc-500" />
+                <span>Post Body & Narrative</span>
               </label>
               <div className="flex items-center gap-2 text-[10px] text-zinc-500 font-mono">
-                <span>{wordCount} words</span>
+                <span className="text-emerald-400 font-semibold">{wordCount} words</span>
                 <span>•</span>
-                <span>{body.length} chars</span>
+                <span>{body.length} characters</span>
               </div>
             </div>
             <textarea
-              rows={9}
+              rows={12}
               value={body}
               onChange={(e) => setBody(e.target.value)}
               placeholder="Detail your insight, workflow, technical takeaways, or project milestones..."
-              className="w-full pl-3.5 py-1.5 bg-transparent border-l-2 border-zinc-800 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-emerald-400 leading-relaxed resize-y transition-colors font-sans"
+              className="w-full p-4 bg-zinc-900/60 border border-zinc-800 rounded-xl text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-emerald-400 leading-relaxed min-h-[280px] transition font-sans resize-y"
             />
           </div>
 
-          {/* CALL TO ACTION FIELD (SEAMLESS WITH GLOWING BOTTOM BORDER) */}
-          <div className="space-y-1">
+          {/* CALL TO ACTION (CTA) INPUT */}
+          <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-mono uppercase text-zinc-400 flex items-center gap-1.5">
-                <span>Call to Action</span>
+              <label className="text-xs font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                <span>Call to Action (CTA)</span>
               </label>
-              <span className="text-[10px] text-zinc-600 font-mono">Optional closing prompt</span>
+              <span className="text-[10px] text-zinc-500 font-mono">Optional closing question</span>
             </div>
             <input
               type="text"
               value={cta}
               onChange={(e) => setCta(e.target.value)}
-              placeholder="e.g. What approach has worked best for your team?"
-              className="w-full pb-2 pt-1 bg-transparent border-b border-zinc-800 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-emerald-400 transition-colors"
+              placeholder="e.g. What strategy has delivered the highest ROI for your engineering team?"
+              className="w-full p-3 bg-zinc-900/60 border border-zinc-800 rounded-xl text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-emerald-400 transition"
             />
           </div>
 
-          {/* HASHTAGS & MENTIONS EDITORS */}
+          {/* HASHTAGS & MENTIONS MANAGERS */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-            {/* Hashtags */}
-            <div className="p-3 bg-zinc-900/30 border border-zinc-800/80 rounded-lg space-y-2">
+            {/* Hashtags Tag Manager */}
+            <div className="p-4 bg-zinc-900/40 border border-zinc-800 rounded-xl space-y-2.5">
               <div className="flex items-center justify-between text-xs text-zinc-400 font-mono">
-                <span className="flex items-center gap-1">
-                  <Tag className="w-3 h-3 text-zinc-500" /> Hashtags ({hashtags.length})
+                <span className="flex items-center gap-1.5 font-semibold">
+                  <Tag className="w-3.5 h-3.5 text-emerald-400" /> Hashtags ({hashtags.length})
                 </span>
               </div>
-              <div className="flex flex-wrap gap-1 min-h-[28px]">
-                {hashtags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300 font-mono text-[11px]"
-                  >
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTag(tag)}
-                      className="text-zinc-500 hover:text-zinc-200"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-              <form onSubmit={handleAddTag} className="flex gap-1 pt-1">
-                <input
-                  type="text"
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  placeholder="Add #tag..."
-                  className="flex-1 px-2 py-1 bg-zinc-900 border border-zinc-800 rounded text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-emerald-400 font-mono"
-                />
-                <button
-                  type="submit"
-                  disabled={!newTag.trim()}
-                  className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded text-xs transition disabled:opacity-40"
-                >
-                  <Plus className="w-3 h-3" />
-                </button>
-              </form>
-            </div>
-
-            {/* Mentions */}
-            <div className="p-3 bg-zinc-900/30 border border-zinc-800/80 rounded-lg space-y-2">
-              <div className="flex items-center justify-between text-xs text-zinc-400 font-mono">
-                <span className="flex items-center gap-1">
-                  <AtSign className="w-3 h-3 text-zinc-500" /> Mentions ({mentions.length})
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-1 min-h-[28px]">
-                {mentions.length === 0 ? (
-                  <span className="text-[11px] text-zinc-600 italic">No mentions</span>
+              <div className="flex flex-wrap gap-1.5 min-h-[32px]">
+                {hashtags.length === 0 ? (
+                  <span className="text-xs text-zinc-600 italic">No hashtags added</span>
                 ) : (
-                  mentions.map((mention) => (
+                  hashtags.map((tag) => (
                     <span
-                      key={mention}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300 text-[11px]"
+                      key={tag}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 font-mono text-xs"
                     >
-                      {mention}
+                      {tag}
                       <button
                         type="button"
-                        onClick={() => handleRemoveMention(mention)}
-                        className="text-zinc-500 hover:text-zinc-200"
+                        onClick={() => handleRemoveTag(tag)}
+                        className="text-zinc-500 hover:text-rose-400 transition"
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -426,157 +397,176 @@ export function PostEditor({
                   ))
                 )}
               </div>
-              <form onSubmit={handleAddMention} className="flex gap-1 pt-1">
+              <form onSubmit={handleAddTag} className="flex gap-1.5 pt-1">
+                <input
+                  type="text"
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  placeholder="Add #tag..."
+                  className="flex-1 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-emerald-400 font-mono"
+                />
+                <button
+                  type="submit"
+                  disabled={!newTag.trim()}
+                  className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-xs transition disabled:opacity-40"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </form>
+            </div>
+
+            {/* Mentions Manager */}
+            <div className="p-4 bg-zinc-900/40 border border-zinc-800 rounded-xl space-y-2.5">
+              <div className="flex items-center justify-between text-xs text-zinc-400 font-mono">
+                <span className="flex items-center gap-1.5 font-semibold">
+                  <AtSign className="w-3.5 h-3.5 text-emerald-400" /> Mentions ({mentions.length})
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5 min-h-[32px]">
+                {mentions.length === 0 ? (
+                  <span className="text-xs text-zinc-600 italic">No mentions added</span>
+                ) : (
+                  mentions.map((mention) => (
+                    <span
+                      key={mention}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs"
+                    >
+                      {mention}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMention(mention)}
+                        className="text-zinc-500 hover:text-rose-400 transition"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))
+                )}
+              </div>
+              <form onSubmit={handleAddMention} className="flex gap-1.5 pt-1">
                 <input
                   type="text"
                   value={newMention}
                   onChange={(e) => setNewMention(e.target.value)}
                   placeholder="Add @mention..."
-                  className="flex-1 px-2 py-1 bg-zinc-900 border border-zinc-800 rounded text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-emerald-400"
+                  className="flex-1 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-emerald-400"
                 />
                 <button
                   type="submit"
                   disabled={!newMention.trim()}
-                  className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded text-xs transition disabled:opacity-40"
+                  className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-xs transition disabled:opacity-40"
                 >
-                  <Plus className="w-3 h-3" />
+                  <Plus className="w-3.5 h-3.5" />
                 </button>
               </form>
             </div>
           </div>
+        </div>
 
-          {/* 4. MINIMAL REFINEMENT ACTION BAR (LOW-OPACITY TEXT LINKS) */}
-          <div className="pt-2 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-mono uppercase text-zinc-500">
-                AI Transformations
+        {/* RIGHT COLUMN: FULL-HEIGHT LIVE LINKEDIN FEED SIMULATION (INDEPENDENT SCROLL) */}
+        <div className="w-full lg:w-1/2 h-full overflow-y-auto p-5 sm:p-8 bg-zinc-900/30 space-y-4 flex flex-col">
+          {/* Live Preview Header & Stats */}
+          <div className="flex items-center justify-between pb-2 border-b border-zinc-800/80 shrink-0">
+            <div className="flex items-center gap-2">
+              <Eye className="w-4 h-4 text-emerald-400" />
+              <span className="text-xs font-bold text-white uppercase tracking-wider font-mono">
+                Live LinkedIn Feed Simulation
               </span>
             </div>
 
-            <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
-              {[
-                { label: 'Regenerate', action: 'REGENERATE', icon: RefreshCw },
-                { label: 'Improve Hook', action: 'IMPROVE_HOOK', icon: Sparkles },
-                { label: 'Make Shorter', action: 'MAKE_SHORTER', icon: Scissors },
-                { label: 'Personal', action: 'MAKE_MORE_PERSONAL', icon: UserCheck },
-                { label: 'Technical', action: 'MAKE_MORE_TECHNICAL', icon: Code },
-                { label: 'Professional', action: 'MAKE_MORE_PROFESSIONAL', icon: Zap },
-                { label: 'Flow', action: 'IMPROVE_FLOW', icon: Layers },
-                { label: 'Simplify', action: 'SIMPLIFY', icon: RotateCcw },
-              ].map(({ label, action, icon: Icon }) => (
-                <button
-                  key={action}
-                  type="button"
-                  onClick={() => handleAction(action)}
-                  disabled={loading}
-                  className="text-xs text-zinc-400 hover:text-emerald-400 hover:bg-zinc-900 px-2.5 py-1 rounded transition-colors disabled:opacity-40 flex items-center gap-1"
-                >
-                  <Icon className="w-3 h-3" />
-                  <span>{label}</span>
-                </button>
-              ))}
-
-              {cta ? (
-                <button
-                  type="button"
-                  onClick={() => handleAction('REMOVE_CTA')}
-                  disabled={loading}
-                  className="text-xs text-zinc-400 hover:text-rose-400 hover:bg-zinc-900 px-2.5 py-1 rounded transition-colors disabled:opacity-40 flex items-center gap-1"
-                >
-                  <X className="w-3 h-3" />
-                  <span>Remove CTA</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => handleAction('ADD_CTA')}
-                  disabled={loading}
-                  className="text-xs text-zinc-400 hover:text-emerald-400 hover:bg-zinc-900 px-2.5 py-1 rounded transition-colors disabled:opacity-40 flex items-center gap-1"
-                >
-                  <PlusCircle className="w-3 h-3" />
-                  <span>Add CTA</span>
-                </button>
-              )}
-
-              {onGenerateAlternatives && (
-                <button
-                  type="button"
-                  onClick={onGenerateAlternatives}
-                  disabled={loading}
-                  className="text-xs text-emerald-400/90 hover:text-emerald-300 hover:bg-zinc-900 px-2.5 py-1 rounded border border-emerald-500/20 transition-colors disabled:opacity-40 flex items-center gap-1 ml-auto font-medium"
-                >
-                  <Layers className="w-3 h-3 text-emerald-400" />
-                  <span>3 Versions</span>
-                </button>
-              )}
+            <div className="flex items-center gap-3 text-[11px] font-mono text-zinc-400">
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3 text-zinc-500" /> {readTimeSeconds}s read
+              </span>
+              <span>•</span>
+              <span>{totalWords} total words</span>
             </div>
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN: CRISP LIVE PREVIEW (5 COLS) */}
-        <div className="lg:col-span-5 flex flex-col space-y-3 sticky top-4">
-          <div className="flex items-center justify-between pb-0.5">
-            <span className="text-xs font-mono uppercase text-zinc-400 flex items-center gap-1.5">
-              <span>Preview</span>
-            </span>
-            <span className="text-[10px] text-zinc-600 font-mono">Live Formatting</span>
           </div>
 
           {/* LinkedIn Simulated Post Card */}
-          <div className="p-5 bg-zinc-900/40 border border-zinc-800 rounded-xl space-y-3 font-sans">
-            {/* Header Mock */}
+          <div className="p-6 bg-zinc-950 border border-zinc-800 rounded-2xl space-y-4 shadow-xl font-sans">
+            {/* LinkedIn Author Header */}
             <div className="flex items-center gap-3 pb-3 border-b border-zinc-800/80">
-              <div className="w-9 h-9 rounded-full bg-black border border-zinc-800 flex items-center justify-center text-emerald-400 font-mono font-bold text-xs">
-                D
-              </div>
-              <div>
-                <div className="text-xs font-semibold text-zinc-100">Member</div>
-                <div className="text-[10px] text-zinc-500 font-mono">Just now</div>
+              {user?.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  className="w-11 h-11 rounded-full object-cover border border-zinc-700 shrink-0"
+                />
+              ) : (
+                <div className="w-11 h-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-emerald-400 font-mono font-bold text-sm shrink-0">
+                  {user?.name ? user.name.charAt(0).toUpperCase() : 'D'}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-bold text-zinc-100 truncate">
+                  {user?.name || 'Your Name'}
+                </div>
+                <div className="text-xs text-zinc-400 truncate">
+                  {user?.profession || 'Full Stack & AI Engineer'}
+                </div>
+                <div className="text-[10px] text-zinc-500 font-mono flex items-center gap-1 mt-0.5">
+                  <span>Just now</span>
+                  <span>•</span>
+                  <span>🌐 Public</span>
+                </div>
               </div>
             </div>
 
-            {/* Hook */}
-            {hook ? (
-              <div className="text-xs sm:text-sm font-semibold text-zinc-100 leading-snug">
-                <FormattedText text={hook} />
-              </div>
-            ) : (
-              <div className="text-xs text-zinc-600 italic">No hook entered...</div>
-            )}
+            {/* Post Content Body */}
+            <div className="space-y-3 text-sm leading-relaxed text-zinc-200">
+              {/* Hook */}
+              {hook ? (
+                <div className="font-bold text-zinc-100 text-base leading-snug">
+                  <FormattedText text={hook} />
+                </div>
+              ) : (
+                <div className="text-xs text-zinc-600 italic">No opening hook entered...</div>
+              )}
 
-            {/* Body */}
-            {body ? (
-              <div className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
-                <FormattedText text={body} />
-              </div>
-            ) : (
-              <div className="text-xs text-zinc-600 italic">No body text...</div>
-            )}
+              {/* Body */}
+              {body ? (
+                <div className="text-zinc-300 leading-relaxed whitespace-pre-wrap">
+                  <FormattedText text={body} />
+                </div>
+              ) : (
+                <div className="text-xs text-zinc-600 italic">No body text entered...</div>
+              )}
 
-            {/* CTA */}
-            {cta && (
-              <div className="text-xs sm:text-sm font-medium text-emerald-400/90 pt-1">
-                <FormattedText text={cta} />
-              </div>
-            )}
+              {/* CTA */}
+              {cta && (
+                <div className="font-semibold text-emerald-400 pt-1">
+                  <FormattedText text={cta} />
+                </div>
+              )}
 
-            {/* Hashtags */}
-            {hashtags.length > 0 && (
-              <div className="text-xs text-zinc-400 font-mono pt-1 leading-relaxed">
-                {hashtags.join(' ')}
-              </div>
-            )}
+              {/* Hashtags */}
+              {hashtags.length > 0 && (
+                <div className="text-xs text-emerald-400/90 font-mono pt-1 leading-relaxed">
+                  {hashtags.join(' ')}
+                </div>
+              )}
 
-            {/* Mentions */}
-            {mentions.length > 0 && (
-              <div className="text-xs text-zinc-500 font-medium">
-                {mentions.join(' ')}
-              </div>
-            )}
+              {/* Mentions */}
+              {mentions.length > 0 && (
+                <div className="text-xs text-zinc-400 font-medium">
+                  {mentions.join(' ')}
+                </div>
+              )}
+            </div>
+
+            {/* LinkedIn Simulated Social Engagement Bar */}
+            <div className="pt-4 border-t border-zinc-800/80 flex items-center justify-between text-xs text-zinc-500 font-medium">
+              <span className="flex items-center gap-1.5">
+                <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px]">👍</span>
+                <span>Ready to publish</span>
+              </span>
+              <span className="text-[11px] font-mono">LinkedIn Format Verified ✓</span>
+            </div>
           </div>
 
           {emailError && (
-            <div className="p-3 bg-zinc-900 border border-rose-500/30 rounded-lg text-xs text-rose-300 flex items-center justify-between">
+            <div className="p-3 bg-zinc-900 border border-rose-500/30 rounded-xl text-xs text-rose-300 flex items-center justify-between">
               <span>{emailError}</span>
               <button onClick={() => setEmailError(null)} className="text-rose-400 hover:text-white">✕</button>
             </div>
@@ -584,60 +574,60 @@ export function PostEditor({
         </div>
       </div>
 
-      {/* 5. BOTTOM OUTPUT ACTIONS BAR */}
-      <div className="p-4 border-t border-zinc-800 bg-zinc-950 flex flex-wrap items-center justify-between gap-3">
-        <div className="text-xs text-zinc-400">
+      {/* 4. BOTTOM OUTPUT ACTION BAR */}
+      <div className="px-6 py-3.5 border-t border-zinc-800 bg-zinc-950 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <div className="text-xs text-zinc-400 flex items-center gap-2">
           {saveSuccess ? (
-            <span className="text-emerald-400 flex items-center gap-1 font-mono">
-              <Check className="w-3.5 h-3.5" /> Saved to workspace.
+            <span className="text-emerald-400 flex items-center gap-1.5 font-mono font-medium">
+              <Check className="w-4 h-4" /> Changes saved to workspace.
             </span>
           ) : approveSuccess ? (
-            <span className="text-emerald-400 flex items-center gap-1 font-mono">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Post approved.
+            <span className="text-emerald-400 flex items-center gap-1.5 font-mono font-medium">
+              <CheckCircle2 className="w-4 h-4" /> Post approved for LinkedIn.
             </span>
           ) : (
-            <span className="text-zinc-500 text-[11px] font-mono">Working draft ready for review.</span>
+            <span className="text-zinc-500 text-xs font-mono">Working draft ready for editing and approval.</span>
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           {/* SAVE DRAFT */}
           <button
             type="button"
             onClick={handleSaveManualEdits}
             disabled={loading}
-            className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-lg text-xs font-medium transition border border-zinc-800 flex items-center gap-1.5"
+            className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 hover:text-white rounded-xl text-xs font-medium transition border border-zinc-800 flex items-center gap-1.5"
           >
             {saveSuccess ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Save className="w-3.5 h-3.5 text-zinc-400" />}
-            <span>{saveSuccess ? 'Saved' : 'Save'}</span>
+            <span>{saveSuccess ? 'Saved' : 'Save Draft'}</span>
           </button>
 
           {/* COPY POST */}
           <button
             type="button"
             onClick={copyFullPost}
-            className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-lg text-xs font-medium transition border border-zinc-800 flex items-center gap-1.5"
+            className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 hover:text-white rounded-xl text-xs font-medium transition border border-zinc-800 flex items-center gap-1.5"
           >
             {copied ? (
               <>
                 <Check className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-emerald-400">Copied</span>
+                <span className="text-emerald-400">Copied!</span>
               </>
             ) : (
               <>
                 <Copy className="w-3.5 h-3.5 text-zinc-400" />
-                <span>Copy</span>
+                <span>Copy Post</span>
               </>
             )}
           </button>
 
-          {/* EMAIL */}
+          {/* EMAIL ME */}
           <button
             type="button"
             onClick={handleEmailPost}
             disabled={emailing || !post?._id}
-            title="Email draft"
-            className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-lg text-xs font-medium transition border border-zinc-800 flex items-center gap-1.5 disabled:opacity-40"
+            title="Email draft to your address"
+            className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 hover:text-white rounded-xl text-xs font-medium transition border border-zinc-800 flex items-center gap-1.5 disabled:opacity-40"
           >
             {emailing ? (
               <>
@@ -647,25 +637,25 @@ export function PostEditor({
             ) : emailSuccess ? (
               <>
                 <Check className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-emerald-400">Sent</span>
+                <span className="text-emerald-400">Sent to Email</span>
               </>
             ) : (
               <>
                 <Mail className="w-3.5 h-3.5 text-zinc-400" />
-                <span>Email</span>
+                <span>Email Me</span>
               </>
             )}
           </button>
 
-          {/* APPROVE (PRIMARY NEON EMERALD ACTION) */}
+          {/* APPROVE POST (PRIMARY EMERALD CTA) */}
           <button
             type="button"
             onClick={handleApprove}
             disabled={loading || post.status === 'APPROVED'}
-            className="px-4 py-1.5 bg-emerald-400 hover:bg-emerald-300 text-black rounded-lg text-xs font-semibold transition flex items-center gap-1.5 disabled:opacity-50"
+            className="px-5 py-2 bg-emerald-400 hover:bg-emerald-300 text-black rounded-xl text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-50 shadow-sm"
           >
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>{post.status === 'APPROVED' ? 'Approved' : 'Approve Post'}</span>
+            <CheckCircle2 className="w-4 h-4" />
+            <span>{post.status === 'APPROVED' ? 'Approved ✓' : 'Approve Post'}</span>
           </button>
         </div>
       </div>
